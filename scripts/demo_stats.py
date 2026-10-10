@@ -51,7 +51,8 @@ def make_demo(path: Path):
         count = (today-start).days
         for offset in range(count+1):
             day = start + dt.timedelta(days=offset)
-            if offset % 11 in (3, 4) and (today-day).days > 5:
+            # Include longer breaks as well as short gaps, for the return views.
+            if (offset % 11 in (3, 4) or 20 <= offset % 67 <= 24) and (today-day).days > 5:
                 continue
             book = min(3, (day.day-1)//12+1)
             pages = 9 + offset*17 % 39
@@ -61,8 +62,11 @@ def make_demo(path: Path):
                 timestamp = int(time.mktime(local.timetuple())) + (i if session == 0 else i-pages//2)*100
                 duration = 55 + (offset+i*7) % 55
                 active_book = min(3, book+1) if session == 1 and day.day in (11, 12, 23, 24) else book
+                total_pages = 180 + active_book*30
+                # Advance through each monthly reading period; overlaps start the next book.
+                start_page = ((day.day-1) % 12)*total_pages//12 if active_book == book else 0
                 conn.execute("INSERT INTO page_stat_data VALUES (?,?,?,?,?)",
-                             (active_book, (offset*19+i) % (180+active_book*30) + 1, timestamp, duration, 180+active_book*30))
+                             (active_book, min(total_pages, start_page+i+1), timestamp, duration, total_pages))
         conn.execute("""UPDATE book SET
             last_open=(SELECT max(start_time) FROM page_stat_data WHERE id_book=book.id),
             total_read_time=(SELECT sum(duration) FROM page_stat_data WHERE id_book=book.id),

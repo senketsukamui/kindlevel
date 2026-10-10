@@ -47,6 +47,8 @@ The first launch shows three original sample books: two EPUBs and one plain-text
 - The selected book's saved completion percentage appears beneath its cover. Tap **Continue reading** to resume.
 - **Statistics** shows period totals and a daily chart. Select **Year** for the activity calendar; tap a day to view its sessions, then tap a session to view that book.
 - Tap the book-history count beneath the overview metrics to browse all books in your statistics history.
+- **Return statistics →** beneath the dashboard shows returns after breaks, both across all reading and for individual books. Choose a break length of 3, 7, or 14 days; tap a return to open its day journal or book journey.
+- **Book journey →** in a book’s statistics shows its recorded reading periods, position curve, breaks, and confirmed finishes. Tap a reading period to open its first day; swipe or use arrows to browse older periods.
 - **Book calendar →** below the overview or yearly heatmap opens a month grid with book-title ribbons and hourly activity bars. Tap a ribbon for book details, or an uncovered part of a day for its journal. Arrows move by month; double arrows move by year.
 - Tap the **Year goal** header to see confirmed finishes, progress, and the yearly target. **Set yearly goal** changes that year’s target; 0 turns it off.
 - **Book statistics** beneath a cover shows that book’s recorded history. **Record finish** lets you supply a completion date, including past years.
@@ -89,6 +91,18 @@ The monthly calendar follows the reference layout: Monday-first weeks, day numbe
 The year goal counts **confirmed finished books**, once per book per calendar year. KOReader’s statistics database does not contain completion dates. Kindlevel imports the `Finished` status and its recorded date from available document sidecars in your selected library and reading history, and saves those observed dates in its own settings. Books with an unknown finish date are not inferred from page counts. Use **Record finish** to backfill a date or record a finish for a book without statistics. Past-year targets and completions are retained.
 
 Tap `×` next to a finished book in the goal view to remove it from that year, then confirm. That exclusion prevents automatic reimport; an explicit Record finish adds it back. Changing dates or removing a goal entry does not modify KOReader’s statistics database or its original Finished status. Previously unobserved completions cannot be recovered automatically if their sidecars have been deleted or their status/date has since changed.
+
+## Book journeys and returns (development)
+
+These features are in the development source and Mac preview; they are not in the linked v0.3.0 release.
+
+A return is recorded when reading resumes after at least **3 full local calendar days** without recorded activity. The shared break selector offers 3, 7, or 14 days and saves the choice in Kindlevel’s preferences. An ongoing break does not count as a return. **Returning to reading** checks activity across every book; **Returning to books** checks each book independently, so reading another book does not end that book’s break. Counts cover all recorded history, with a separate last-30-days count. Typical break is the median length of completed qualifying breaks.
+
+A book journey groups recorded reading days into periods separated by qualifying breaks. Reading days and the inclusive calendar span from the first to latest entry are shown separately. The curve shows the **furthest recorded position on each reading day**, normalized by the page count stored with that event, so font changes do not multiply events. Backward movement can appear on the curve. A position is not proof that earlier pages were read; periods are not automatically labeled as rereads. Shaded gaps show breaks, and finishes come only from the existing confirmed-completion ledger. Older databases without per-event page counts still show reading periods and returns, with position history marked unavailable.
+
+Calculations use positive-duration activity, exclude future timestamps, and measure gaps in local calendar days across daylight-saving changes. They describe recorded history: pauses in the collector or missing records can appear as breaks. Native statistics stay read-only; Kindlevel does not add a second activity collector. Refresh statistics refreshes the journey data too.
+
+`tests/journeys.lua` checks the native SQLite schema, layout normalization, global/book scope, break boundaries, daylight-saving dates, confirmed finishes, legacy databases, refresh, and native UI navigation. With the preview running, `python3 tests/journeys_preview.py` exercises the new screens interactively.
 
 ## Achievement proof of concept (development)
 

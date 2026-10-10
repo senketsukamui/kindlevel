@@ -63,8 +63,13 @@ local function capture()
     Device.screen.bb:writePNG(ipc .. "/screen.next.png")
     assert(os.rename(ipc .. "/screen.next.png", ipc .. "/screen.png"))
     local f = assert(io.open(ipc .. "/state.next.json", "w"))
+    local manager = require("apps/filemanager/filemanager").instance
+    local home = manager and manager.kindlevel and manager.kindlevel.home
     f:write(json.encode{ sequence = sequence, frame = frame, width = Device.screen:getWidth(), height = Device.screen:getHeight(),
-        demo = config.demo, rendered = os.time(), achievement_toast = Toasts.active and Toasts.active.achievement.id or false })
+        demo = config.demo, rendered = os.time(), achievement_toast = Toasts.active and Toasts.active.achievement.id or false,
+        tab = home and home.tab, stats_view = home and home.stats_view, stats_book_id = home and home.stats_book_id,
+        stats_list_page = home and home.stats_list_page, recovery_mode = home and (home.stats_recovery_mode or "reading"),
+        break_days = home and home:journeyThreshold() })
     f:close()
     assert(os.rename(ipc .. "/state.next.json", ipc .. "/state.json"))
 end
