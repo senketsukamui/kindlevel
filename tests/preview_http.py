@@ -62,7 +62,25 @@ if __name__ == "__main__":
     action({"type": "key", "key": "Esc"})
     action({"type": "key", "key": "Esc"})
     action({"type": "swipe", "x": 500, "y": 700, "direction": "east"})
+    # Calendar uses the same native Lua screen, with ribbons and month navigation.
+    request("/api/reload", {})
+    state_after()
+    action({"type": "tap", "x": 500, "y": px(715)})
+    action({"type": "tap", "x": px(88), "y": px(696)})
+    capture("demo-book-calendar.png")
+    action({"type": "tap", "x": 850, "y": px(85)})
+    capture("demo-year-goal.png")
+    # Exercise the actual numeric InputDialog and persistence, then restore the demo target.
+    for target in (12, 24):
+        action({"type": "tap", "x": 500, "y": px(415)})
+        for _ in range(2):
+            action({"type": "key", "key": "Backspace"})
+        action({"type": "text", "text": str(target)})
+        action({"type": "tap", "x": 750, "y": 855})
+        preferences = (OUTPUT.parents[1]/".cache/preview/data/settings/kindlevel.lua").read_text()
+        import re
+        assert re.search(r'\["'+str(today.year)+r'"\]\s*=\s*'+str(target), preferences), "native goal editor persisted target"
     # End on the initial dashboard, ready for the user to explore.
     request("/api/reload", {})
     state_after()
-    print("Preview reload, native touch dispatch, calendar/day/book flow, keyboard, and swipe passed.")
+    print("Preview reload, native touch, calendars, yearly goal editor, keyboard, and swipe passed.")

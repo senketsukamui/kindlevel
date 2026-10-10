@@ -53,15 +53,16 @@ def make_demo(path: Path):
             day = start + dt.timedelta(days=offset)
             if offset % 11 in (3, 4) and (today-day).days > 5:
                 continue
-            book = offset % 3 + 1
+            book = min(3, (day.day-1)//12+1)
             pages = 9 + offset*17 % 39
             for i in range(pages):
                 session = 0 if i < pages//2 else 1
                 local = dt.datetime.combine(day, dt.time(7, 30) if session == 0 else dt.time(20, 10))
                 timestamp = int(time.mktime(local.timetuple())) + (i if session == 0 else i-pages//2)*100
                 duration = 55 + (offset+i*7) % 55
+                active_book = min(3, book+1) if session == 1 and day.day in (11, 12, 23, 24) else book
                 conn.execute("INSERT INTO page_stat_data VALUES (?,?,?,?,?)",
-                             (book, (offset*19+i) % (180+book*30) + 1, timestamp, duration, 180+book*30))
+                             (active_book, (offset*19+i) % (180+active_book*30) + 1, timestamp, duration, 180+active_book*30))
         conn.execute("""UPDATE book SET
             last_open=(SELECT max(start_time) FROM page_stat_data WHERE id_book=book.id),
             total_read_time=(SELECT sum(duration) FROM page_stat_data WHERE id_book=book.id),

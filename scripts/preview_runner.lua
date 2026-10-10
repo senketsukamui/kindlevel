@@ -39,6 +39,18 @@ settings:saveSetting("library_root", "/preview/books")
 settings:saveSetting("auto_home", false)
 settings:delSetting("return_to_home")
 settings:flush()
+if config.demo and not settings:has("finished_books") then
+    local Stats = require("kindlevel_stats")
+    local stats = Stats:new():load()
+    local Goals = require("kindlevel_goals")
+    local goals = Goals:new{ settings = settings, stats = stats }
+    local first = os.time{ year = tonumber(os.date("%Y", stats.now)), month = 1, day = 1, hour = 0, min = 0, sec = 0 }
+    for id = 1, 2 do
+        local book = stats:book(id)
+        if book then goals:record(book, os.date("%Y-%m-%d", math.max(first, Stats.day(stats.now, -id * 30))), "manual") end
+    end
+    settings:flush()
+end
 require("apps/filemanager/filemanager"):showFiles("/preview/books")
 require("apps/filemanager/filemanager").instance.kindlevel:onKindlevel("stats")
 
