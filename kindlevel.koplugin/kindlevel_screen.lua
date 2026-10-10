@@ -126,6 +126,14 @@ function Home:header()
     local p, w = self:px(28), self.width
     self:text("KINDLEVEL", p, self:px(22), w - 2 * p, self:px(25), 12,
         { single = true, gray = 70 })
+    if self.owner.previewAchievement then
+        self:addWidget(ImageWidget:new{
+            file = self.owner.plugin_dir .. "/assets/achievement.svg", width = self:px(24), height = self:px(24), alpha = true,
+        }, w - self:px(170), self:px(22))
+        self:hit(w - self:px(189), 0, self:px(60), self:px(55), function()
+            self.tab = "achievements"; self:rebuild()
+        end, "tab-achievements")
+    end
     self:addWidget(ImageWidget:new{
         file = self.owner.plugin_dir .. "/assets/settings.svg", width = self:px(22), height = self:px(22), alpha = true,
     }, w - self:px(110), self:px(23))
@@ -141,7 +149,8 @@ function Home:header()
     local cell = math.floor((w - 2 * p) / 3)
     local labels = {
         { tostring(#self.library.books) .. " books", "On device" },
-        { self.tab == "library" and "Library" or self.tab == "settings" and "Settings" or "Reading", "Your own pace" },
+        { self.tab == "library" and "Library" or self.tab == "settings" and "Settings"
+            or self.tab == "achievements" and "Achievements" or "Reading", "Your own pace" },
         { os.date("%d %b"), "Local library" },
     }
     if self.tab == "stats" then
@@ -360,6 +369,7 @@ function Home:rebuild()
     if self.tab == "stats" then self:statsPanel()
     elseif self.tab == "library" then self:libraryGrid()
     elseif self.tab == "settings" then self:settingsPanel()
+    elseif self.tab == "achievements" then self:achievementPanel()
     else self:reading() end
     self:navigation()
     UIManager:setDirty(self, "full")
@@ -475,4 +485,5 @@ function Home:onCloseWidget()
 end
 
 for name, method in pairs(require("kindlevel_stats_screen")) do Home[name] = method end
+for name, method in pairs(require("kindlevel_achievements_screen")) do Home[name] = method end
 return Home

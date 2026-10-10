@@ -1,0 +1,117 @@
+local Blitbuffer = require("ffi/blitbuffer")
+local Device = require("device")
+local Font = require("ui/font")
+local Geom = require("ui/geometry")
+local ImageWidget = require("ui/widget/imagewidget")
+local TextWidget = require("ui/widget/textwidget")
+local UIManager = require("ui/uimanager")
+local Widget = require("ui/widget/widget")
+local Screen = Device.screen
+
+local Toast = Widget:extend{
+    name = "KindlevelAchievementToast", toast = true, modal = false,
+    disable_double_tap = false, timeout = 4,
+}
+
+function Toast:init()
+    local scale = math.min(Screen:getWidth() / 600, Screen:getHeight() / 800)
+    self.scale = scale
+    local function px(value) return math.floor(value * scale + 0.5) end
+    self.width = math.min(px(324), Screen:getWidth() - px(32))
+    self.height = px(111)
+    self.dimen = Geom:new{ x = Screen:getWidth() - self.width - px(19), y = px(18),
+        w = self.width + px(3), h = self.height + px(3) }
+    self.resources, self.texts = {}, {}
+    local factor = Screen:scaleBySize(1000) / 1000
+    local function text(value, x, y, width, size, gray, bold, serif)
+        local widget = TextWidget:new{ text = value, padding = 0, bold = bold, max_width = width,
+            face = Font:getFace(serif and "NotoSerif-Regular.ttf" or "cfont", size * scale / factor),
+            fgcolor = Blitbuffer.Color8(gray) }
+        self.resources[#self.resources + 1] = widget
+        self.texts[#self.texts + 1] = { widget = widget, x = x, y = y }
+    end
+    self.icon = ImageWidget:new{ file = self.plugin_dir .. "/assets/achievement.svg", width = px(48), height = px(48), alpha = true }
+    self.resources[#self.resources + 1] = self.icon
+    local tx = px(82)
+    local tw = self.width - tx - px(15)
+    text("ACHIEVEMENT UNLOCKED", tx, px(12), tw, 9, 95, false)
+    text(self.achievement.title, tx, px(31), tw, 20, 0, false, true)
+    text(self.achievement.notification, tx, px(60), tw, 11, 85, false)
+    text("+" .. tostring(self.achievement.xp) .. " XP", tx, px(86), tw, 11, 25, true)
+    text("PREVIEW", self.width - px(63), px(89), px(55), 8, 145, false)
+end
+
+function Toast:paintTo(bb, x, y)
+    self.dimen.x, self.dimen.y = x, y
+    local function px(v) return math.floor(v * self.scale + 0.5) end
+    bb:paintRoundedRect(x + px(3), y + px(3), self.width, self.height, Blitbuffer.Color8(205), px(5))
+    bb:paintRoundedRect(x, y, self.width, self.height, Blitbuffer.COLOR_WHITE, px(5))
+    bb:paintBorder(x, y, self.width, self.height, math.max(1, px(1)), Blitbuffer.Color8(75), px(5))
+    bb:paintRect(x + px(11), y + px(24), px(57), px(57), Blitbuffer.Color8(242))
+    self.icon:paintTo(bb, x + px(15), y + px(28))
+    for _, item in ipairs(self.texts) do item.widget:paintTo(bb, x + item.x, y + item.y) end
+end
+
+function Toast:onShow()
+    self._timeout = function() self:onClose() end
+    UIManager:scheduleIn(self.timeout, self._timeout)
+end
+
+function Toast:onClose()
+    if not self.closed then UIManager:close(self, "ui", self.dimen) end
+    return false
+end
+
+function Toast:onCloseWidget()
+    if self.closed then return end
+    self.closed = true
+    if self._timeout then UIManager:unschedule(self._timeout); self._timeout = nil end
+    for _, widget in ipairs(self.resources) do widget:free() end
+    self.resources = {}
+    if self.on_done then self.on_done(self) end
+end
+
+-- Match KOReader toast behavior: dismiss and let the original input reach the reader.
+Toast.onGesture = Toast.onClose
+Toast.onKeyPress = Toast.onClose
+Toast.onKeyRepeat = Toast.onClose
+
+local Manager = { pending = {}, active = nil }
+
+function Manager:changed()
+    if self.observer then self.observer() end
+end
+
+function Manager:advance()
+    if self.active or #self.pending == 0 then return end
+    local request = table.remove(self.pending, 1)
+    local toast = Toast:new{
+        achievement = request.achievement, plugin_dir = request.plugin_dir, timeout = request.timeout or 4,
+        on_done = function(widget)
+            if self.active == widget then self.active = nil end
+            self:changed()
+            if #self.pending > 0 then UIManager:scheduleIn(0.2, function() self:advance() end) end
+        end,
+    }
+    self.active = toast
+    UIManager:show(toast, "ui", toast.dimen, toast.dimen.x, toast.dimen.y)
+    self:changed()
+end
+
+function Manager:preview(achievement, plugin_dir, timeout)
+    self.pending[#self.pending + 1] = { achievement = achievement, plugin_dir = plugin_dir, timeout = timeout }
+    self:advance()
+end
+
+function Manager:clear()
+    self.pending = {}
+    if self.active then self.active:onClose() end
+end
+
+function Toast:onSuspend()
+    Manager:clear()
+    return false
+end
+
+Manager.Toast = Toast
+return Manager

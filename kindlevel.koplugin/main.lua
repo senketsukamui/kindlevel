@@ -47,6 +47,46 @@ function Kindlevel:addToMainMenu(items)
         text = "Kindlevel statistics", sorting_hint = "more_tools",
         callback = function() self:onKindlevel("stats") end,
     }
+    items.kindlevel_achievements = {
+        text = "Kindlevel achievements", sorting_hint = "more_tools",
+        callback = function() self:onKindlevel("achievements") end,
+    }
+    items.kindlevel_achievement_preview = {
+        text = "Preview achievement notification", sorting_hint = "more_tools",
+        callback = function() self:chooseAchievementPreview() end,
+    }
+end
+
+function Kindlevel:previewAchievement(id)
+    local catalog = require("kindlevel_achievements")
+    local achievement = catalog.find(id or "first_pages")
+    if achievement then require("kindlevel_achievement_toast"):preview(achievement, self.plugin_dir) end
+end
+
+function Kindlevel:chooseAchievementPreview()
+    local catalog = require("kindlevel_achievements")
+    local dialog, buttons = nil, {}
+    for _, item in ipairs(catalog.catalog) do
+        buttons[#buttons + 1] = { { text = item.title, callback = function()
+            UIManager:close(dialog)
+            UIManager:scheduleIn(0.1, function() self:previewAchievement(item.id) end)
+        end } }
+    end
+    dialog = ButtonDialog:new{ title = "Preview an achievement", buttons = buttons }
+    UIManager:show(dialog)
+end
+
+function Kindlevel:previewAchievementInBook()
+    local book = self.home and self.home.library.books[self.home.index]
+    if not book then
+        UIManager:show(InfoMessage:new{ text = "Choose a readable book in your library first." }); return
+    end
+    local plugin_dir = self.plugin_dir
+    self:openBook(book, function()
+        UIManager:scheduleIn(0.4, function()
+            require("kindlevel_achievement_toast"):preview(require("kindlevel_achievements").find("first_pages"), plugin_dir)
+        end)
+    end)
 end
 
 function Kindlevel:getRoot()
@@ -215,7 +255,7 @@ function Kindlevel:statisticsTools()
     UIManager:show(dialog)
 end
 
-function Kindlevel:openBook(book)
+function Kindlevel:openBook(book, after_open)
     if not book or lfs.attributes(book.file, "mode") ~= "file" then
         UIManager:show(InfoMessage:new{ text = "This book has moved or is no longer available. Refresh your library." })
         return
@@ -225,7 +265,7 @@ function Kindlevel:openBook(book)
     self.settings:flush()
     if self.home then self.home:onClose() end
     local ReaderUI = require("apps/reader/readerui")
-    ReaderUI:showReader(book.file)
+    ReaderUI:showReader(book.file, nil, nil, nil, after_open)
 end
 
 function Kindlevel:chooseFolder()
