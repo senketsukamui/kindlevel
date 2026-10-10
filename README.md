@@ -2,13 +2,13 @@
 
 A local Kindle app inspired by the reel, with reading statistics, an activity calendar, a cover carousel, and a local book library. Book rendering, saved positions, and activity recording are handled by KOReader.
 
-**[Download v0.2.0](https://github.com/senketsukamui/kindlevel/releases/download/v0.2.0/kindlevel-0.2.0.zip)** · [Release and installation notes](https://github.com/senketsukamui/kindlevel/releases/tag/v0.2.0)
+**[Download v0.3.0](https://github.com/senketsukamui/kindlevel/releases/download/v0.3.0/kindlevel-0.3.0.zip)** · [Release and installation notes](https://github.com/senketsukamui/kindlevel/releases/tag/v0.3.0)
 
 ## Install on your Paperwhite 10th generation
 
 KOReader must already be installed. This package is a plugin; it does not include KOReader or require a new jailbreak.
 
-1. Download **`kindlevel-0.2.0.zip`** from the [GitHub release](https://github.com/senketsukamui/kindlevel/releases/tag/v0.2.0) and unzip it on your computer. The installable ZIP is in the release assets; GitHub's automatic **Source code** archives are for development.
+1. Download **`kindlevel-0.3.0.zip`** from the [GitHub release](https://github.com/senketsukamui/kindlevel/releases/tag/v0.3.0) and unzip it on your computer. The installable ZIP is in the release assets; GitHub's automatic **Source code** archives are for development.
 2. Exit KOReader, then connect the Kindle over USB.
 3. Copy the **entire `kindlevel.koplugin` folder** into the `plugins` directory inside your KOReader installation. For a typical installation, the USB drive should contain:
 
@@ -47,12 +47,15 @@ The first launch shows three original sample books: two EPUBs and one plain-text
 - The selected book's saved completion percentage appears beneath its cover. Tap **Continue reading** to resume.
 - **Statistics** shows period totals and a daily chart. Select **Year** for the activity calendar; tap a day to view its sessions, then tap a session to view that book.
 - Tap the book-history count beneath the overview metrics to browse all books in your statistics history.
-- **Book statistics** beneath a cover shows that book’s recorded history.
+- **Book calendar →** below the overview or yearly heatmap opens a month grid with book-title ribbons and hourly activity bars. Tap a ribbon for book details, or an uncovered part of a day for its journal. Arrows move by month; double arrows move by year.
+- Tap the **Year goal** header to see confirmed finishes, progress, and the yearly target. **Set yearly goal** changes that year’s target; 0 turns it off.
+- **Book statistics** beneath a cover shows that book’s recorded history. **Record finish** lets you supply a completion date, including past years.
 - **Library** shows a grid of books. Tap a book to select it; swipe to move between library pages.
 - The sliders icon at the top opens **Settings**.
 - **Settings → Choose books folder** lets you use your own books. Navigate to a folder and **long-press its name**, or the current-folder entry, then confirm **Choose**.
 - **Settings → Refresh library** picks up files added over USB.
 - **Settings → Daily reading goal** sets a minutes-per-day target; 0 turns it off.
+- **Settings → Yearly book goal** sets this year’s books-to-finish target (default 24).
 - **Settings → Reading statistics tools** pauses/resumes the default collector and opens KOReader’s original calendar or time-range tools.
 - **Settings → Refresh statistics** reloads the recorded history.
 - **Settings → Open sample library** returns to the bundled examples.
@@ -78,6 +81,14 @@ Keep KOReader’s default **Reading statistics** plugin enabled. Kindlevel reads
 Overview pages count distinct book/page combinations **within each local calendar day**, matching KOReader’s daily grouping. Rereading on another day counts in that day’s total. Book lifetime totals count distinct pages across the whole book history. Reading time includes rereading; the per-page estimate uses KOReader’s configured maximum seconds per page. The `page_stat` view preserves KOReader’s adjustment when pagination changes after font or layout edits.
 
 Session intervals come from the original activity records, merged when consecutive events in the same book have a gap of at most `max(30 seconds, min_sec)`, following the default timeline behavior. Counts use local calendar days; KOReader’s custom shifted-day calendar remains available in its original calendar tools. History outside your selected library folder is included. Empty, unavailable, or paused history is not replaced with demo data on Kindle.
+
+## Yearly goals and the book calendar
+
+The monthly calendar follows the reference layout: Monday-first weeks, day numbers, ribbons across consecutive days a book was read, and hourly duration histograms. Ribbons break at week boundaries and gaps with no recorded reading. Overlapping titles occupy separate lanes. Four-, five-, and six-week months are supported; a `+N` badge shows additional books when the cell has no room for another lane. The hourly bars are scaled against the busiest hour in the displayed month.
+
+The year goal counts **confirmed finished books**, once per book per calendar year. KOReader’s statistics database does not contain completion dates. Kindlevel imports the `Finished` status and its recorded date from available document sidecars in your selected library and reading history, and saves those observed dates in its own settings. Books with an unknown finish date are not inferred from page counts. Use **Record finish** to backfill a date or record a finish for a book without statistics. Past-year targets and completions are retained.
+
+Tap `×` next to a finished book in the goal view to remove it from that year, then confirm. That exclusion prevents automatic reimport; an explicit Record finish adds it back. Changing dates or removing a goal entry does not modify KOReader’s statistics database or its original Finished status. Previously unobserved completions cannot be recovered automatically if their sidecars have been deleted or their status/date has since changed.
 
 ## Preview and debug on a Mac
 
@@ -110,7 +121,7 @@ The preview uses SQLite’s backup API to make a separate local copy; the suppli
 
 Tested with the official **KOReader v2026.07.1 Linux ARM64 runtime**, using its real widgets, document engines, plugin loader, and reader navigation. Previews are rendered at **1072 × 1448**, matching the Paperwhite 10th generation's portrait resolution.
 
-Integration checks cover the reader flow with the default statistics plugin enabled, native daily-query parity, pagination rescaling, rereading, streaks, the capped per-page estimate, Unicode metadata, read-only database protection, and touch-driven statistics navigation. The live preview is also checked through HTTP for Lua reload, taps, swipes, keyboard navigation, and PNG rendering. Actual Kindle touch responsiveness, sleep behavior, and screen refresh still need your device check. Earlier KOReader versions have not been validated.
+Integration checks cover the reader flow with the default statistics plugin enabled, native daily-query parity, pagination rescaling, rereading, streaks, the capped per-page estimate, Unicode metadata, read-only database protection, and touch-driven statistics navigation. Additional checks cover native completion-date import, yearly deduplication and persistence, removal/reimport behavior, leap years, overlapping ribbons, four-/six-week months, and the native goal editor. The live preview is also checked through HTTP for Lua reload, taps, swipes, keyboard navigation, and PNG rendering. Actual Kindle touch responsiveness, sleep behavior, and screen refresh still need your device check. Earlier KOReader versions have not been validated.
 
 If a problem occurs, KOReader's `crash.log` in its installation directory is useful for diagnosis. The plugin can be disabled in the plugin manager or uninstalled by removing its folder after exiting KOReader.
 
