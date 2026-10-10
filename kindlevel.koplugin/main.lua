@@ -70,6 +70,9 @@ function Kindlevel:onKindlevel(tab)
     local Screen = require("kindlevel_screen")
     local library = Library:new{ root = self:getRoot() }
     library:scan()
+    self.goal_library = library
+    self.goals_imported = false
+    if self.stats then self.stats:refresh() end
     self.home = Screen:new{
         owner = self,
         library = library,
@@ -84,12 +87,85 @@ end
 
 function Kindlevel:getStats()
     if not self.stats then self.stats = require("kindlevel_stats"):new() end
+    local Stats = require("kindlevel_stats")
+    if not self.stats.fixed_now and Stats.day(self.stats.now) ~= Stats.day(os.time()) then self.stats:refresh() end
     return self.stats
 end
 
 function Kindlevel:refreshStats()
     self:getStats():refresh()
+    self.goals_imported = false
     if self.home then self.home:rebuild() end
+end
+
+function Kindlevel:getGoals()
+    if not self.goals then self.goals = require("kindlevel_goals"):new{ settings = self.settings, stats = self:getStats() } end
+    if not self.goals_imported then
+        local files = {}
+        for _, item in ipairs(require("readhistory").hist or {}) do files[#files + 1] = item.file end
+        local library = self.home and self.home.library or self.goal_library
+        if library then
+            for _, item in ipairs(library.books) do files[#files + 1] = item.file end
+        end
+        self.goals:import(files)
+        self.goals_imported = true
+    end
+    return self.goals
+end
+
+function Kindlevel:removeFinish(key, year)
+    local ConfirmBox = require("ui/widget/confirmbox")
+    UIManager:show(ConfirmBox:new{
+        text = "Remove this book from your " .. tostring(year) .. " goal?",
+        ok_text = "Remove", ok_callback = function()
+            self:getGoals():remove(key, year)
+            if self.home then self.home:rebuild() end
+        end,
+    })
+end
+
+function Kindlevel:setYearGoal(year)
+    year = year or tonumber(os.date("%Y", self:getStats().now))
+    local dialog
+    dialog = InputDialog:new{
+        title = "Books to finish in " .. tostring(year), input_type = "number",
+        input = tostring(self:getGoals():target(year)),
+        description = "Books per year. Enter 0 to turn the goal off.",
+        buttons = { {
+            { text = "Cancel", callback = function() UIManager:close(dialog) end },
+            { text = "Save", is_enter_default = true, callback = function()
+                if not self:getGoals():setTarget(year, tonumber(dialog:getInputText())) then
+                    UIManager:show(InfoMessage:new{ text = "Enter a whole number from 0 to 10000." }); return
+                end
+                UIManager:close(dialog)
+                if self.home then self.home:rebuild() end
+            end },
+        } },
+    }
+    UIManager:show(dialog); dialog:onShowKeyboard()
+end
+
+function Kindlevel:recordFinish(book)
+    local dialog
+    dialog = InputDialog:new{
+        title = "Finish date · " .. book.title,
+        input = os.date("%Y-%m-%d", self:getStats().now),
+        description = "YYYY-MM-DD. This book counts once toward the goal for that year.",
+        buttons = { {
+            { text = "Cancel", callback = function() UIManager:close(dialog) end },
+            { text = "Record finish", is_enter_default = true, callback = function()
+                local date = dialog:getInputText()
+                if not self:getGoals():validDate(date) then
+                    UIManager:show(InfoMessage:new{ text = "Enter a valid date on or before today (YYYY-MM-DD)." }); return
+                end
+                self:getGoals():record(book, date, "manual")
+                self.settings:flush()
+                UIManager:close(dialog)
+                if self.home then self.home:rebuild() end
+            end },
+        } },
+    }
+    UIManager:show(dialog); dialog:onShowKeyboard()
 end
 
 function Kindlevel:setDailyGoal()

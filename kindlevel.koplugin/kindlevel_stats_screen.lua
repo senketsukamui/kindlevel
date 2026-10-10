@@ -124,7 +124,8 @@ function View:statsOverview()
             or totals.seconds == 0 and "Your reading history will appear here as you read."
             or #series > 60 and "Activity is grouped across this period. Tap the book count for details."
             or "Tap a day in the chart to see its reading sessions."
-        self:text(note, p, self:px(671), self.width - 2 * p, self:px(34), 12, { center = true, gray = 95 })
+        self:text(note, p, self:px(670), self.width - 2 * p, self:px(24), 10, { center = true, gray = 95 })
+        self:statsMonthLink()
     end
     if self.stats_period ~= "year" then
         self:hit(p, self:px(350), self.width - 2 * p, self:px(39), function()
@@ -162,8 +163,16 @@ function View:statsCalendar(series)
         if day.pages == 0 then self:outline(x, y, size, size, day.future and 234 or 216) end
         if not day.future then self:hit(x, y, size, size, function() self:statsOpenDay(day.date) end, "calendar-" .. day.date) end
     end
-    self:text("Tap a day to explore its reading sessions", p, self:px(714), self.width - 2 * p, self:px(20), 10,
-        { center = true, single = true, gray = 100 })
+    self:statsMonthLink()
+end
+
+function View:statsMonthLink()
+    local p = self:px(28)
+    self:text("Book calendar →", p, self:px(707), self.width - 2 * p, self:px(22), 12,
+        { center = true, single = true, gray = 60 })
+    self:hit(p, self:px(702), self.width - 2 * p, self:px(27), function()
+        self:statsNavigate("month"); self:rebuild()
+    end, "book-calendar")
 end
 
 function View:statsOpenDay(key)
@@ -176,6 +185,7 @@ function View:statsNavigate(view)
     self.stats_history[#self.stats_history + 1] = { view = self.stats_view,
         date = self.stats_date, book_id = self.stats_book_id, page = self.stats_list_page }
     self.stats_view = view
+    if view == "book" then self.stats_library_book = nil end
 end
 
 function View:statsDay()
@@ -246,6 +256,11 @@ function View:statsBook()
     if not book then
         self:text("No recorded history for this book yet.\nKeep Reading statistics enabled while you read.", p, self:px(300),
             self.width - 2 * p, self:px(100), 20, { center = true, gray = 85 })
+        if self.stats_library_book and self.owner.recordFinish then
+            self:button("Record finish", p, self:px(485), self.width - 2 * p, self:px(46), function()
+                self.owner:recordFinish(self.stats_library_book)
+            end, false, "record-finish")
+        end
         return
     end
     self:statsCards({ { Stats.number(book.pages), "Distinct pages read" }, { Stats.duration(book.seconds), "Reading time" },
@@ -257,7 +272,14 @@ function View:statsBook()
     local series = stats:series("30", nil, book.id)
     self:statsChart(series, self:px(51), self:px(477), self.width - self:px(84), self:px(157))
     local period = book.first and os.date("%d %b %Y", book.first) .. " → " .. os.date("%d %b %Y", book.last) or ""
-    self:text(period, p, self:px(675), self.width - 2 * p, self:px(25), 12, { center = true, single = true, gray = 100 })
+    self:text(period, p, self:px(664), self.width - 2 * p, self:px(22), 11, { center = true, single = true, gray = 100 })
+    if self.owner.recordFinish then
+        self:text("Record finish →", p, self:px(700), self.width - 2 * p, self:px(24), 13,
+            { center = true, single = true })
+        self:hit(p, self:px(694), self.width - 2 * p, self:px(30), function()
+            self.owner:recordFinish(book)
+        end, "record-finish")
+    end
 end
 
 function View:statsBooks()
@@ -282,7 +304,9 @@ function View:statsBooks()
 end
 
 function View:statsPanel()
-    if self.stats_view == "day" then self:statsDay()
+    if self.stats_view == "month" then self:statsMonth()
+    elseif self.stats_view == "goal" then self:statsGoal()
+    elseif self.stats_view == "day" then self:statsDay()
     elseif self.stats_view == "book" then self:statsBook()
     elseif self.stats_view == "books" then self:statsBooks()
     else self:statsOverview() end
@@ -294,6 +318,12 @@ function View:statsNext(direction)
         local next_day = Stats.day(Stats.date(self.stats_date), direction)
         if next_day <= Stats.day(stats.now) then self.stats_date = os.date("%Y-%m-%d", next_day) end
         self.stats_list_page = 1
+    elseif self.stats_view == "month" then
+        self:statsMoveMonth(direction)
+        return true
+    elseif self.stats_view == "goal" then
+        self.stats_goal_year = math.max(1970, math.min(tonumber(os.date("%Y", stats.now)), self.stats_goal_year + direction))
+        self.stats_list_page = 1
     elseif self.stats_view == "books" then
         self.stats_list_page = math.max(1, math.min(math.max(1, math.ceil(#stats.books / 6)), self.stats_list_page + direction))
     elseif self.stats_period == "year" then
@@ -302,5 +332,7 @@ function View:statsNext(direction)
     self:rebuild()
     return true
 end
+
+for name, method in pairs(require("kindlevel_calendar")) do View[name] = method end
 
 return View

@@ -6,7 +6,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 PLUGIN = ROOT / "kindlevel.koplugin"
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 
 
 def main():

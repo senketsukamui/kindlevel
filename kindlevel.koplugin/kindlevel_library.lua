@@ -94,6 +94,7 @@ function Library:inspect(book)
         book.percent = tonumber(config:readSetting("percent_finished"))
         book.pages = tonumber(config:readSetting("doc_pages"))
         book.page = tonumber(config:readSetting("last_page"))
+        book.checksum = config:readSetting("partial_md5_checksum")
         book.started = true
     end
     -- Read metadata lazily for only the visible books, without paginating a whole EPUB.

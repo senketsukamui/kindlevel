@@ -72,9 +72,74 @@ for i, key in ipairs(result.dates) do
 end
 native_daily:close()
 
+local month = stats:monthData(date(10))
+assert(month.days["2026-10-10"].books[1].id == 1 and #month.days["2026-10-10"].books == 2,
+    "month includes each book read on an overlapping day")
+assert(month.days["2026-10-10"].hours[8] == 180 and month.days["2026-10-10"].hours[9] == 60,
+    "hourly histograms use original durations without page-rescaling duplicates")
+local Goals = require("kindlevel_goals")
+local goal_settings = LuaSettings:open("/tmp/kindlevel-year-goal-settings.lua")
+local goals = Goals:new{ settings = goal_settings, stats = stats }
+assert(goals:target(2026) == 24 and goals:setTarget(2026, 12), "year goal is configurable")
+assert(not goals:setTarget(2026, -1) and not goals:setTarget(2026, 1.5), "invalid targets are rejected")
+assert(not goals:validDate("2026-02-30") and not goals:validDate("2026-10-11"), "invalid and future finish dates are rejected")
+assert(goals:record(stats:book(1), "2026-10-09", "manual"), "confirmed finish is recorded")
+assert(not goals:record(stats:book(1), "2026-10-09", "manual"), "duplicate finish is idempotent")
+goals:record(stats:book(1), "2026-10-10", "manual")
+assert(#goals:list(2026) == 1, "rereading does not count a book twice in a year")
+goals:record(stats:book(1), "2025-12-31", "manual")
+assert(#goals:list(2025) == 1 and #goals:list(2026) == 1, "each year retains its own completion")
+goals:record(stats:book(2), "2026-10-10", "manual")
+local persisted = Goals:new{ settings = LuaSettings:open("/tmp/kindlevel-year-goal-settings.lua"), stats = stats }
+goal_settings:flush()
+persisted.settings = LuaSettings:open("/tmp/kindlevel-year-goal-settings.lua")
+assert(#persisted:list(2026) == 2 and persisted:target(2026) == 12, "goal and confirmed finishes persist")
+local DocSettings = require("docsettings")
+local file = "/tmp/kindlevel-native-completion.epub"
+local f = assert(io.open(file, "w")); f:close()
+local sidecar = DocSettings:open(file)
+sidecar:saveSetting("summary", { status = "complete", modified = "2026-10-09" })
+sidecar:saveSetting("doc_props", { title = "A Quiet Beginning", authors = "Kindlevel" })
+sidecar:saveSetting("partial_md5_checksum", "one")
+sidecar:flush()
+goals:remove(Goals.key(stats:book(1)), 2026)
+goals:import{ file }
+assert(#goals:list(2026) == 1, "removing a finish suppresses automatic reimport for that year")
+goals:record(stats:book(1), "2026-10-08", "manual")
+goals:import{ file }
+assert(goals:list(2026)[2].date == "2026-10-08", "native import preserves an explicitly corrected finish date")
+local fresh = Goals:new{ settings = LuaSettings:open("/tmp/kindlevel-native-import-settings.lua"), stats = stats }
+assert(fresh:import{ file } and #fresh:list(2026) == 1, "KOReader Finished sidecar date is imported")
+
+local Calendar = require("kindlevel_calendar")
+local fake = { begin = Stats.date("2024-11-01"), finish = Stats.date("2024-12-01"), days = {} }
+for day = 9, 28 do
+    local key = string.format("2024-11-%02d", day)
+    fake.days[key] = { books = {} }
+    if day <= 12 then fake.days[key].books[#fake.days[key].books + 1] = { id = 1, title = "Plum Island" } end
+    if day >= 13 then fake.days[key].books[#fake.days[key].books + 1] = { id = 2, title = "The Final Empire" } end
+    if day == 16 then fake.days[key].books[#fake.days[key].books + 1] = { id = 1, title = "Plum Island" } end
+end
+local layout = Calendar.monthLayout(fake, 2)
+assert(layout.weeks == 5 and layout.offset == 4 and layout.count == 30, "reference November 2024 has the correct grid")
+for _, ribbon in ipairs(layout.ribbons) do
+    assert(ribbon.first >= 0 and ribbon.last <= 6 and ribbon.first <= ribbon.last, "ribbons split at week edges")
+end
+local overlapping = {}
+for _, ribbon in ipairs(layout.ribbons) do
+    if ribbon.week == 2 then overlapping[ribbon.id] = ribbon.lane end
+end
+assert(overlapping[1] and overlapping[2] and overlapping[1] ~= overlapping[2], "overlapping titles use distinct lanes")
+assert(Calendar.monthLayout({ begin = Stats.date("2021-02-01"), finish = Stats.date("2021-03-01"), days = {} }, 2).weeks == 4,
+    "four-week February is supported")
+assert(Calendar.monthLayout({ begin = Stats.date("2024-02-01"), finish = Stats.date("2024-03-01"), days = {} }, 2).count == 29,
+    "leap February includes day 29")
+assert(Calendar.monthLayout({ begin = Stats.date("2026-08-01"), finish = Stats.date("2026-09-01"), days = {} }, 1).weeks == 6,
+    "six-week months are supported")
+
 local Library = require("kindlevel_library")
 local owner = { plugin_dir = "/workspace/kindlevel.koplugin", settings = LuaSettings:open("/tmp/kindlevel-ui-goals.lua"),
-    getStats = function() return stats end }
+    getStats = function() return stats end, getGoals = function() return goals end }
 local library = Library:new{ root = owner.plugin_dir .. "/books" }
 library:scan()
 local home = require("kindlevel_screen"):new{ owner = owner, library = library, initial_tab = "stats" }
@@ -119,5 +184,28 @@ assert(home.stats_metric == "seconds", "time toggle works through real gesture d
 render("statistics-time")
 tap("stats-books")
 render("statistics-books")
+home:onBack()
+tap("book-calendar")
+assert(home.stats_view == "month", "book-calendar action opens the month view")
+home.stats_month = Stats.month(date(10))
+render("book-calendar")
+local ribbon_id
+for _, hit in ipairs(home.hits) do if hit.id and hit.id:match("^month%-book%-1%-") then ribbon_id = hit.id; break end end
+tap(ribbon_id)
+assert(home.stats_view == "book" and home.stats_book_id == 1, "book ribbons take touch priority over their day cells")
+home:onBack()
+assert(home.stats_view == "month", "back restores the book calendar")
+home.stats_month = Stats.date("2026-08-01")
+render("book-calendar-six-weeks")
+tap("year-goal")
+assert(home.stats_view == "goal", "year goal header opens confirmed completions")
+render("year-goal")
+local recorded_without_history
+owner.recordFinish = function(_, selected) recorded_without_history = selected end
+home.stats_view, home.stats_book_id = "book", nil
+home.stats_library_book = library.books[2]
+render("book-without-statistics")
+tap("record-finish")
+assert(recorded_without_history == library.books[2], "a local book without statistics can still record a confirmed finish")
 home:onClose()
-print("ALL statistics, native query parity, read-only, and statistics UI checks passed")
+print("ALL statistics, goals, month calendars, native query parity, read-only, and UI checks passed")

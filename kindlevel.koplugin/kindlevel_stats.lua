@@ -23,6 +23,11 @@ function Stats.date(key)
     return os.time{ year = tonumber(y), month = tonumber(m), day = tonumber(d), hour = 0, min = 0, sec = 0 }
 end
 
+function Stats.month(timestamp, delta)
+    local date = os.date("*t", timestamp or os.time())
+    return os.time{ year = date.year, month = date.month + (delta or 0), day = 1, hour = 0, min = 0, sec = 0 }
+end
+
 function Stats.minutes(seconds)
     return math.floor((seconds or 0) / 60)
 end
@@ -48,7 +53,8 @@ function Stats:new(options)
     options = options or {}
     return setmetatable({
         path = options.path or DataStorage:getSettingsDir() .. "/statistics.sqlite3",
-        now = options.now or os.time(), days = {}, books = {}, loaded = false,
+        now = options.now or os.time(), fixed_now = options.now ~= nil,
+        days = {}, books = {}, loaded = false, months = {},
     }, self)
 end
 
@@ -82,8 +88,10 @@ local function rows(conn, sql, ...)
 end
 
 function Stats:refresh()
+    if not self.fixed_now then self.now = os.time() end
     self.loaded = false
     self.days, self.books = {}, {}
+    self.months = {}
     return self:load()
 end
 
@@ -265,6 +273,55 @@ function Stats:dayDetails(key)
         details.books[#details.books + 1] = { id = tonumber(row[1]), title = row[2], pages = tonumber(row[3]), seconds = tonumber(row[4]) }
     end
     return details
+end
+
+function Stats:monthData(timestamp)
+    self:load()
+    local begin = Stats.month(timestamp)
+    local finish = Stats.month(begin, 1)
+    local key = os.date("%Y-%m", begin)
+    if self.months[key] then return self.months[key] end
+    local result, err = self:query(function(conn)
+        local raw = conn:rowexec("SELECT name FROM sqlite_master WHERE type='table' AND name='page_stat_data';")
+        return {
+            books = rows(conn, [[
+                SELECT strftime('%Y-%m-%d', p.start_time, 'unixepoch', 'localtime'),
+                       b.id, b.title, count(DISTINCT p.page), sum(p.duration)
+                FROM page_stat p JOIN book b ON b.id=p.id_book
+                WHERE p.start_time >= ? AND p.start_time < ? AND p.duration > 0
+                GROUP BY 1,b.id ORDER BY 1,b.title;
+            ]], begin, finish),
+            activity = rows(conn, string.format([[
+                SELECT start_time,duration FROM %s
+                WHERE start_time >= ? AND start_time < ? AND duration > 0 ORDER BY start_time;
+            ]], raw and "page_stat_data" or "page_stat"), begin, finish),
+        }
+    end)
+    local data = { days = {}, begin = begin, finish = finish, error = err }
+    local current = begin
+    while current < finish do
+        local date = os.date("%Y-%m-%d", current)
+        data.days[date] = { date = date, timestamp = current, books = {}, hours = {} }
+        current = Stats.day(current, 1)
+    end
+    for _, row in ipairs(result and result.books or {}) do
+        local day = data.days[row[1]]
+        if day then day.books[#day.books + 1] = {
+            id = tonumber(row[2]), title = row[3], pages = tonumber(row[4]), seconds = tonumber(row[5]),
+        } end
+    end
+    for _, row in ipairs(result and result.activity or {}) do
+        local start, seconds = tonumber(row[1]), tonumber(row[2])
+        while seconds > 0 and start < finish do
+            local date = os.date("*t", start)
+            local length = math.min(seconds, 3600 - date.min * 60 - date.sec)
+            local day = data.days[os.date("%Y-%m-%d", start)]
+            if day then day.hours[date.hour + 1] = (day.hours[date.hour + 1] or 0) + length end
+            start, seconds = start + length, seconds - length
+        end
+    end
+    self.months[key] = data
+    return data
 end
 
 return Stats

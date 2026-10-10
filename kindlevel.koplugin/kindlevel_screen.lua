@@ -22,6 +22,7 @@ function Home:init()
     self.stats_period = "30"
     self.stats_metric = "pages"
     self.stats_year = tonumber(os.date("%Y"))
+    self.stats_month = require("kindlevel_stats").month(os.time())
     self.stats_view = "overview"
     self.stats_list_page = 1
     self.stats_history = {}
@@ -154,6 +155,19 @@ function Home:header()
             { goal > 0 and string.format("%d / %d min", math.floor((today.seconds or 0) / 60), goal)
                 or require("kindlevel_stats").duration(today.seconds), goal > 0 and "Daily goal" or "Today" },
         }
+        if self.owner.getGoals then
+            local year = self.stats_view == "goal" and (self.stats_goal_year or self.stats_year)
+                or self.stats_view == "month" and tonumber(os.date("%Y", self.stats_month))
+                or self.stats_period == "year" and self.stats_year
+                or tonumber(os.date("%Y", stats.now))
+            local goals = self.owner:getGoals()
+            local target, completed = goals:target(year), #goals:list(year)
+            labels[3] = { target > 0 and string.format("%d / %d books", completed, target)
+                or tostring(completed) .. " books", "Year goal · " .. tostring(year) }
+            self:hit(p + 2 * cell, y, cell, h, function()
+                self.stats_goal_year = year; self:statsNavigate("goal"); self.stats_list_page = 1; self:rebuild()
+            end, "year-goal")
+        end
     end
     for i, label in ipairs(labels) do
         local x = p + (i - 1) * cell
@@ -225,6 +239,7 @@ function Home:reading()
             local match = self.owner:getStats():findBook(book)
             self.stats_book_id = match and match.id
             self.stats_book_title = book.title
+            self.stats_library_book = book
             self.stats_view, self.tab = "book", "stats"
             self:rebuild()
         end, "book-statistics")
@@ -290,13 +305,14 @@ function Home:settingsPanel()
         { self.owner.settings:isTrue("auto_home") and "[✓] Show home on file browser entry" or "[ ] Show home on file browser entry",
             function() self.owner:toggleAutoHome() end, "auto-home" },
         { "Daily reading goal", function() self.owner:setDailyGoal() end, "daily-goal" },
+        { "Yearly book goal", function() self.owner:setYearGoal() end, "yearly-goal" },
         { "Reading statistics tools", function() self.owner:statisticsTools() end, "statistics-tools" },
         { "Refresh statistics", function() self.owner:refreshStats() end, "refresh-stats" },
     }
     for i, action in ipairs(actions) do
-        self:button(action[1], p, self:px(300 + (i - 1) * 50), w - 2 * p, self:px(43), action[2], false, action[3])
+        self:button(action[1], p, self:px(300 + (i - 1) * 45), w - 2 * p, self:px(39), action[2], false, action[3])
     end
-    local note = "Kindlevel 0.2.0 · Your reading, at a glance."
+    local note = "Kindlevel 0.3.0 · Your reading, at a glance."
     if next(self.library.warnings) then note = note .. "\nSome folders were skipped; choose a smaller books folder." end
     self:text(note, p, self:px(670), w - 2 * p, self:px(45), 12, { center = true, gray = 95 })
 end
