@@ -18,7 +18,13 @@ local Home = InputContainer:extend{
 }
 
 function Home:init()
-    self.tab = "read"
+    self.tab = self.initial_tab or "read"
+    self.stats_period = "30"
+    self.stats_metric = "pages"
+    self.stats_year = tonumber(os.date("%Y"))
+    self.stats_view = "overview"
+    self.stats_list_page = 1
+    self.stats_history = {}
     self.index = self.library:find(self.selected_file)
     self.page = math.floor((self.index - 1) / 6) + 1
     self.key_events.Back = { { "Back" }, { "Esc" } }
@@ -119,6 +125,13 @@ function Home:header()
     local p, w = self:px(28), self.width
     self:text("KINDLEVEL", p, self:px(22), w - 2 * p, self:px(25), 12,
         { single = true, gray = 70 })
+    self:addWidget(ImageWidget:new{
+        file = self.owner.plugin_dir .. "/assets/settings.svg", width = self:px(22), height = self:px(22), alpha = true,
+    }, w - self:px(110), self:px(23))
+    self:hit(w - self:px(128), 0, self:px(58), self:px(55), function()
+        self.settings_return_tab = self.tab
+        self.tab = "settings"; self:rebuild()
+    end, "tab-settings")
     self:text("×", w - self:px(66), self:px(10), self:px(48), self:px(42), 29,
         { center = true, single = true })
     self:hit(w - self:px(75), 0, self:px(75), self:px(55), function() self:onClose() end, "close")
@@ -130,6 +143,18 @@ function Home:header()
         { self.tab == "library" and "Library" or self.tab == "settings" and "Settings" or "Reading", "Your own pace" },
         { os.date("%d %b"), "Local library" },
     }
+    if self.tab == "stats" then
+        local stats = self.owner:getStats():load()
+        local today = stats.days[os.date("%Y-%m-%d", stats.now)] or {}
+        local goal = self.owner.settings:readSetting("daily_minutes")
+        if goal == nil then goal = 20 end
+        labels = {
+            { tostring(stats:streak()) .. " days", "Reading streak" },
+            { "Statistics", "Your own pace" },
+            { goal > 0 and string.format("%d / %d min", math.floor((today.seconds or 0) / 60), goal)
+                or require("kindlevel_stats").duration(today.seconds), goal > 0 and "Daily goal" or "Today" },
+        }
+    end
     for i, label in ipairs(labels) do
         local x = p + (i - 1) * cell
         self:text(label[1], x, y + self:px(8), cell, self:px(23), 15, { center = true, single = true })
@@ -192,7 +217,18 @@ function Home:reading()
         { center = true, single = true, gray = 80 })
     local bw = math.floor(w * 0.54)
     self:button(book.started and "Continue reading" or "Start reading", math.floor((w - bw) / 2),
-        math.floor(h * 0.815), bw, self:px(48), function() self.owner:openBook(book) end, true, "start-reading")
+        math.floor(h * 0.803), bw, self:px(48), function() self.owner:openBook(book) end, true, "start-reading")
+    if self.owner.getStats then
+        local y = math.floor(h * 0.871)
+        self:text("Book statistics →", p, y, w - 2 * p, self:px(25), 13, { center = true, single = true, gray = 75 })
+        self:hit(p, y - self:px(3), w - 2 * p, self:px(29), function()
+            local match = self.owner:getStats():findBook(book)
+            self.stats_book_id = match and match.id
+            self.stats_book_title = book.title
+            self.stats_view, self.tab = "book", "stats"
+            self:rebuild()
+        end, "book-statistics")
+    end
 end
 
 function Home:libraryGrid()
@@ -245,28 +281,31 @@ end
 function Home:settingsPanel()
     local p, w = self:px(28), self.width
     self:text("Make yourself at home", p, self:px(145), w - 2 * p, self:px(77), 29, { serif = true })
-    self:text("BOOKS FOLDER", p, self:px(230), w - 2 * p, self:px(24), 11, { single = true, gray = 90 })
-    self:text(self.library.root, p, self:px(262), w - 2 * p, self:px(65), 14, { gray = 65 })
+    self:text("BOOKS FOLDER", p, self:px(217), w - 2 * p, self:px(24), 11, { single = true, gray = 90 })
+    self:text(self.library.root, p, self:px(244), w - 2 * p, self:px(48), 13, { gray = 65 })
     local actions = {
         { "Choose books folder", function() self.owner:chooseFolder() end, "choose-folder" },
         { "Refresh library", function() self:rescan() end, "refresh" },
         { "Open sample library", function() self.owner:useSamples() end, "samples" },
         { self.owner.settings:isTrue("auto_home") and "[✓] Show home on file browser entry" or "[ ] Show home on file browser entry",
             function() self.owner:toggleAutoHome() end, "auto-home" },
+        { "Daily reading goal", function() self.owner:setDailyGoal() end, "daily-goal" },
+        { "Reading statistics tools", function() self.owner:statisticsTools() end, "statistics-tools" },
+        { "Refresh statistics", function() self.owner:refreshStats() end, "refresh-stats" },
     }
     for i, action in ipairs(actions) do
-        self:button(action[1], p, self:px(348 + (i - 1) * 63), w - 2 * p, self:px(49), action[2], false, action[3])
+        self:button(action[1], p, self:px(300 + (i - 1) * 50), w - 2 * p, self:px(43), action[2], false, action[3])
     end
-    local note = "Kindlevel 0.1.1\nYour books stay on this Kindle."
+    local note = "Kindlevel 0.2.0 · Your reading, at a glance."
     if next(self.library.warnings) then note = note .. "\nSome folders were skipped; choose a smaller books folder." end
-    self:text(note, p, self:px(635), w - 2 * p, self:px(90), 13, { center = true, gray = 95 })
+    self:text(note, p, self:px(670), w - 2 * p, self:px(45), 12, { center = true, gray = 95 })
 end
 
 function Home:navigation()
     local y, h = math.floor(self.height * 0.914), self:px(56)
     local cell = math.floor(self.width / 3)
     self:rect(self:px(28), y - self:px(12), self.width - self:px(56), math.max(1, self:px(1)), 220)
-    for i, item in ipairs{ { "read", "Reading", "reading" }, { "library", "Library", "library" }, { "settings", "Settings", "settings" } } do
+    for i, item in ipairs{ { "stats", "Statistics", "statistics" }, { "read", "Reading", "reading" }, { "library", "Library", "library" } } do
         local x = (i - 1) * cell
         local size = self:px(26)
         self:addWidget(ImageWidget:new{
@@ -280,6 +319,7 @@ function Home:navigation()
         end
         self:hit(x, y - self:px(10), cell, h + self:px(12), function()
             self.tab = item[1]
+            if self.tab == "stats" then self.stats_view = "overview"; self.stats_history = {} end
             self.page = math.floor((self.index - 1) / 6) + 1
             self:rebuild()
         end, "tab-" .. item[1])
@@ -301,7 +341,8 @@ function Home:rebuild()
     self.ges_events.TapKindlevel = { GestureRange:new{ ges = "tap", range = self.dimen } }
     self.ges_events.SwipeKindlevel = { GestureRange:new{ ges = "swipe", range = self.dimen } }
     self:header()
-    if self.tab == "library" then self:libraryGrid()
+    if self.tab == "stats" then self:statsPanel()
+    elseif self.tab == "library" then self:libraryGrid()
     elseif self.tab == "settings" then self:settingsPanel()
     else self:reading() end
     self:navigation()
@@ -314,6 +355,7 @@ function Home:paintTo(bb, x, y)
     for _, command in ipairs(self.draw) do
         if command.kind == "rect" then
             bb:paintRect(x + command.x, y + command.y, command.w, command.h, Blitbuffer.Color8(command.gray))
+        elseif command.kind == "custom" then command.paint(bb, x, y)
         else command.widget:paintTo(bb, x + command.x, y + command.y) end
     end
 end
@@ -344,7 +386,8 @@ function Home:rememberSelection()
 end
 
 function Home:onNext()
-    if self.tab == "library" then
+    if self.tab == "stats" then return self:statsNext(1)
+    elseif self.tab == "library" then
         self.page = math.min(math.max(1, math.ceil(#self.library.books / 6)), self.page + 1)
     elseif self.tab == "read" then
         self.index = math.min(math.max(1, #self.library.books), self.index + 1)
@@ -355,7 +398,8 @@ function Home:onNext()
 end
 
 function Home:onPrevious()
-    if self.tab == "library" then self.page = math.max(1, self.page - 1)
+    if self.tab == "stats" then return self:statsNext(-1)
+    elseif self.tab == "library" then self.page = math.max(1, self.page - 1)
     elseif self.tab == "read" then
         self.index = math.max(1, self.index - 1)
         self:rememberSelection()
@@ -378,7 +422,15 @@ function Home:rescan()
 end
 
 function Home:onBack()
-    if self.tab ~= "read" then self.tab = "read"; self:rebuild()
+    if self.tab == "stats" and self.stats_view ~= "overview" then
+        local previous = table.remove(self.stats_history)
+        if previous then
+            self.stats_view, self.stats_date, self.stats_book_id, self.stats_list_page =
+                previous.view, previous.date, previous.book_id, previous.page
+        else self.stats_view = "overview" end
+        self:rebuild()
+    elseif self.tab == "settings" then self.tab = self.settings_return_tab or "read"; self:rebuild()
+    elseif self.tab ~= "read" then self.tab = "read"; self:rebuild()
     else self:onClose() end
     return true
 end
@@ -406,4 +458,5 @@ function Home:onCloseWidget()
     if self.owner.home == self then self.owner.home = nil end
 end
 
+for name, method in pairs(require("kindlevel_stats_screen")) do Home[name] = method end
 return Home

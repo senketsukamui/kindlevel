@@ -52,6 +52,7 @@ local owner = {
     chooseFolder = function() end,
     useSamples = function() end,
     toggleAutoHome = function() end,
+    getStats = function() return require("kindlevel_stats"):new{ path = "/tmp/no-smoke-statistics.sqlite3" } end,
 }
 local opened
 owner.openBook = function(_, book) opened = book.file end
@@ -112,7 +113,10 @@ home:onClose()
 local PluginLoader = require("pluginloader")
 local Kindlevel = dofile(plugin .. "/main.lua")
 Kindlevel.path = plugin
-PluginLoader.enabled_plugins = { Kindlevel }
+package.path = "plugins/statistics.koplugin/?.lua;" .. package.path
+local NativeStatistics = dofile("plugins/statistics.koplugin/main.lua")
+NativeStatistics.path = "plugins/statistics.koplugin"
+PluginLoader.enabled_plugins = { Kindlevel, NativeStatistics }
 PluginLoader.disabled_plugins = {}
 PluginLoader.loaded_plugins = {}
 local FileManager = require("apps/filemanager/filemanager")

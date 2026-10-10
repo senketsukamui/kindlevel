@@ -1,4 +1,4 @@
 return {
     fullname = "Kindlevel",
-    description = "A quiet home for your local books: covers, a library, and one tap to keep reading.",
+    description = "Your reading at a glance: statistics from KOReader, a local library, book covers, and one tap to keep reading.",
 }
