@@ -1,36 +1,40 @@
-# Kindlevel — Reading Home for KOReader
+# Kindlevel for KOReader
 
-A first local Kindle app inspired by the reel: a quiet reading home with a cover carousel, a local book library, and settings. Book rendering and saved reading positions are handled by KOReader.
+A first local Kindle app inspired by the reel: a quiet home with a cover carousel, a local book library, and settings. Book rendering and saved reading positions are handled by KOReader.
 
-**[Download v0.1.0](https://github.com/senketsukamui/kindlevel/releases/download/v0.1.0/reading-home-0.1.0.zip)** · [Release and installation notes](https://github.com/senketsukamui/kindlevel/releases/tag/v0.1.0)
+**[Download v0.1.1](https://github.com/senketsukamui/kindlevel/releases/download/v0.1.1/kindlevel-0.1.1.zip)** · [Release and installation notes](https://github.com/senketsukamui/kindlevel/releases/tag/v0.1.1)
 
 ## Install on your Paperwhite 10th generation
 
 KOReader must already be installed. This package is a plugin; it does not include KOReader or require a new jailbreak.
 
-1. Download **`reading-home-0.1.0.zip`** from the [GitHub release](https://github.com/senketsukamui/kindlevel/releases/tag/v0.1.0) and unzip it on your computer. The installable ZIP is in the release assets; GitHub's automatic **Source code** archives are for development.
+1. Download **`kindlevel-0.1.1.zip`** from the [GitHub release](https://github.com/senketsukamui/kindlevel/releases/tag/v0.1.1) and unzip it on your computer. The installable ZIP is in the release assets; GitHub's automatic **Source code** archives are for development.
 2. Exit KOReader, then connect the Kindle over USB.
-3. Copy the **entire `readinghome.koplugin` folder** into the `plugins` directory inside your KOReader installation. For a typical installation, the USB drive should contain:
+3. Copy the **entire `kindlevel.koplugin` folder** into the `plugins` directory inside your KOReader installation. For a typical installation, the USB drive should contain:
 
    ```text
    koreader/
      reader.lua
      plugins/
-       readinghome.koplugin/
+       kindlevel.koplugin/
          main.lua
          _meta.lua
-         readinghome_library.lua
-         readinghome_screen.lua
+         kindlevel_library.lua
+         kindlevel_screen.lua
          assets/
          books/
    ```
 
-   On the Kindle, that is usually `/mnt/us/koreader/plugins/readinghome.koplugin/`. If your installation is elsewhere, use the directory containing KOReader's `reader.lua`.
+   On the Kindle, that is usually `/mnt/us/koreader/plugins/kindlevel.koplugin/`. If your installation is elsewhere, use the directory containing KOReader's `reader.lua`.
 
 4. Safely eject the Kindle, disconnect USB, and start KOReader.
-5. Open the main menu, go to the **Tools** section, and choose **Reading Home**. If it is missing, open KOReader's plugin manager, enable **Reading Home**, and restart KOReader. External plugins must be allowed in KOReader's plugin settings.
+5. Open the main menu, go to the **Tools** section, and choose **Kindlevel**. If it is missing, open KOReader's plugin manager, enable **Kindlevel**, and restart KOReader. External plugins must be allowed in KOReader's plugin settings.
 
-**Do not create an extra nesting level.** `main.lua` must be directly inside `plugins/readinghome.koplugin/`.
+**Do not create an extra nesting level.** `main.lua` must be directly inside `plugins/kindlevel.koplugin/`.
+
+### Upgrade from the original release
+
+Exit KOReader and remove the old `readinghome.koplugin` folder before installing `kindlevel.koplugin`, so only one plugin is loaded. Choose your books folder again in Kindlevel's Settings; preferences now use `kindlevel.lua`. Your own books' reading positions remain in KOReader's existing document sidecars. Reassign any shortcut to the new **Kindlevel** gesture action.
 
 ## Try it
 
@@ -39,7 +43,7 @@ The first launch shows three original sample books: two EPUBs and one plain-text
 - Swipe left/right or tap a neighboring cover to select a book.
 - Tap the large cover or **Start reading** to open it in KOReader.
 - Turn pages using KOReader's usual gestures and controls.
-- To return, open KOReader's main menu and choose **Reading Home**. This saves and closes the book, then restores the custom home.
+- To return, open KOReader's main menu and choose **Kindlevel**. This saves and closes the book, then restores the custom home.
 - The selected book's saved completion percentage appears beneath its cover. Tap **Continue reading** to resume.
 - **Library** shows a grid of books. Tap a book to select it; swipe to move between library pages.
 - **Settings → Choose books folder** lets you use your own books. Navigate to a folder and **long-press its name**, or the current-folder entry, then confirm **Choose**.
@@ -48,7 +52,7 @@ The first launch shows three original sample books: two EPUBs and one plain-text
 - **Show home on file browser entry** displays the custom home whenever KOReader enters its file browser. KOReader can still reopen its last book directly if that is your startup preference.
 - Tap **×** to close the custom screen and use KOReader's normal file browser.
 
-The plugin registers a **Reading Home** gesture action too. You can assign it through KOReader's gesture settings for quicker access from a book.
+The plugin registers a **Kindlevel** gesture action too. You can assign it through KOReader's gesture settings for quicker access from a book.
 
 ## Formats and scope
 
@@ -70,7 +74,7 @@ If a problem occurs, KOReader's `crash.log` in its installation directory is use
 
 ## Development
 
-Plugin source is in `readinghome.koplugin/`. Its local preferences are stored in `readinghome.lua` inside KOReader's settings directory. Reading positions remain in KOReader's normal document sidecars.
+Plugin source is in `kindlevel.koplugin/`. Its local preferences are stored in `kindlevel.lua` inside KOReader's settings directory. Reading positions remain in KOReader's normal document sidecars.
 
 Build the installable archive with Python 3:
 

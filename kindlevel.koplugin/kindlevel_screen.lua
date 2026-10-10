@@ -12,7 +12,7 @@ local logger = require("logger")
 local Screen = Device.screen
 
 local Home = InputContainer:extend{
-    name = "ReadingHomeScreen",
+    name = "KindlevelScreen",
     covers_fullscreen = true,
     stop_events_propagation = true,
 }
@@ -104,7 +104,7 @@ function Home:cover(book, x, y, w, h, small)
             return
         end
         pcall(widget.free, widget)
-        logger.warn("Reading Home: cannot render cover", book.file, err)
+        logger.warn("Kindlevel: cannot render cover", book.file, err)
     end
     self:outline(x, y, w, h, 175)
     self:rect(x + self:px(8), y, math.max(1, self:px(1)), h, 212)
@@ -117,7 +117,7 @@ end
 
 function Home:header()
     local p, w = self:px(28), self.width
-    self:text("READING HOME", p, self:px(22), w - 2 * p, self:px(25), 12,
+    self:text("KINDLEVEL", p, self:px(22), w - 2 * p, self:px(25), 12,
         { single = true, gray = 70 })
     self:text("×", w - self:px(66), self:px(10), self:px(48), self:px(42), 29,
         { center = true, single = true })
@@ -257,7 +257,7 @@ function Home:settingsPanel()
     for i, action in ipairs(actions) do
         self:button(action[1], p, self:px(348 + (i - 1) * 63), w - 2 * p, self:px(49), action[2], false, action[3])
     end
-    local note = "Reading Home 0.1.0\nYour books stay on this Kindle."
+    local note = "Kindlevel 0.1.1\nYour books stay on this Kindle."
     if next(self.library.warnings) then note = note .. "\nSome folders were skipped; choose a smaller books folder." end
     self:text(note, p, self:px(635), w - 2 * p, self:px(90), 13, { center = true, gray = 95 })
 end
@@ -298,8 +298,8 @@ function Home:rebuild()
     self.scale = math.min(self.width / 600, self.height / 800)
     self.dimen = Geom:new{ x = 0, y = 0, w = self.width, h = self.height }
     self.draw, self.hits = {}, {}
-    self.ges_events.TapReadingHome = { GestureRange:new{ ges = "tap", range = self.dimen } }
-    self.ges_events.SwipeReadingHome = { GestureRange:new{ ges = "swipe", range = self.dimen } }
+    self.ges_events.TapKindlevel = { GestureRange:new{ ges = "tap", range = self.dimen } }
+    self.ges_events.SwipeKindlevel = { GestureRange:new{ ges = "swipe", range = self.dimen } }
     self:header()
     if self.tab == "library" then self:libraryGrid()
     elseif self.tab == "settings" then self:settingsPanel()
@@ -318,7 +318,7 @@ function Home:paintTo(bb, x, y)
     end
 end
 
-function Home:onTapReadingHome(_, gesture)
+function Home:onTapKindlevel(_, gesture)
     for _, hit in ipairs(self.hits) do
         local pos = gesture.pos
         if pos.x >= hit.x and pos.x < hit.x + hit.w and pos.y >= hit.y and pos.y < hit.y + hit.h then
@@ -329,7 +329,7 @@ function Home:onTapReadingHome(_, gesture)
     return true
 end
 
-function Home:onSwipeReadingHome(_, gesture)
+function Home:onSwipeKindlevel(_, gesture)
     if gesture.direction == "west" or gesture.direction == "north" then self:onNext()
     elseif gesture.direction == "east" or gesture.direction == "south" then self:onPrevious() end
     return true

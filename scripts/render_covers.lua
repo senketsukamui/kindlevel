@@ -1,13 +1,13 @@
 -- Run with the official KOReader LuaJIT runtime from its working directory.
 require("setupkoenv")
 G_defaults = require("luadefaults"):open()
-G_reader_settings = require("luasettings"):open("/tmp/readinghome-cover-settings.lua")
+G_reader_settings = require("luasettings"):open("/tmp/kindlevel-cover-settings.lua")
 local Blitbuffer = require("ffi/blitbuffer")
 local Device = require("device")
 require("document/canvascontext"):init(Device)
 local Font = require("ui/font")
 local TextBoxWidget = require("ui/widget/textboxwidget")
-local output = arg[1] or "/workspace/readinghome.koplugin/books"
+local output = arg[1] or "/workspace/kindlevel.koplugin/books"
 local factor = Device.screen:scaleBySize(1000) / 1000
 local background = 247
 local function text(bb, value, x, y, w, h, size, serif, gray)
@@ -25,7 +25,7 @@ for index, title in ipairs{ "A Quiet Beginning", "Notes on Reading", "The Long W
     background = index == 2 and 230 or 247
     bb:fill(Blitbuffer.Color8(background))
     bb:paintRect(28, 0, 2, 900, Blitbuffer.Color8(205))
-    text(bb, "READING HOME\nA SMALL EDITION", 62, 48, 440, 75, 17, false, 65)
+    text(bb, "KINDLEVEL\nA SMALL EDITION", 62, 48, 440, 75, 17, false, 65)
     text(bb, title, 60, 150, 450, 240, 59, true)
     if index == 1 then
         bb:paintCircle(365, 660, 132, Blitbuffer.Color8(185))

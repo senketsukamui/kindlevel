@@ -8,18 +8,18 @@ local WidgetContainer = require("ui/widget/container/widgetcontainer")
 local ffiUtil = require("ffi/util")
 local lfs = require("libs/libkoreader-lfs")
 
-local ReadingHome = WidgetContainer:extend{
-    name = "readinghome",
+local Kindlevel = WidgetContainer:extend{
+    name = "kindlevel",
     is_doc_only = false,
 }
 
-function ReadingHome:init()
-    self.plugin_dir = ffiUtil.realpath(self.path or "plugins/readinghome.koplugin")
-        or self.path or "plugins/readinghome.koplugin"
-    self.settings = LuaSettings:open(DataStorage:getSettingsDir() .. "/readinghome.lua")
+function Kindlevel:init()
+    self.plugin_dir = ffiUtil.realpath(self.path or "plugins/kindlevel.koplugin")
+        or self.path or "plugins/kindlevel.koplugin"
+    self.settings = LuaSettings:open(DataStorage:getSettingsDir() .. "/kindlevel.lua")
     self.ui.menu:registerToMainMenu(self)
-    Dispatcher:registerAction("readinghome_open", {
-        category = "none", event = "ReadingHome", title = "Reading Home", general = true,
+    Dispatcher:registerAction("kindlevel_open", {
+        category = "none", event = "Kindlevel", title = "Kindlevel", general = true,
     })
     if not self.ui.document then
         local returning = self.settings:isTrue("return_to_home")
@@ -29,25 +29,25 @@ function ReadingHome:init()
             UIManager:nextTick(function()
                 -- A scheduled callback must not reopen a home on a retired file manager.
                 local FileManager = require("apps/filemanager/filemanager")
-                if FileManager.instance == self.ui then self:onReadingHome() end
+                if FileManager.instance == self.ui then self:onKindlevel() end
             end)
         end
     end
 end
 
-function ReadingHome:addToMainMenu(items)
-    items.readinghome = {
-        text = "Reading Home",
+function Kindlevel:addToMainMenu(items)
+    items.kindlevel = {
+        text = "Kindlevel",
         sorting_hint = "more_tools",
-        callback = function() self:onReadingHome() end,
+        callback = function() self:onKindlevel() end,
     }
 end
 
-function ReadingHome:getRoot()
+function Kindlevel:getRoot()
     return self.settings:readSetting("library_root") or self.plugin_dir .. "/books"
 end
 
-function ReadingHome:onReadingHome()
+function Kindlevel:onKindlevel()
     if self.ui.document then
         self.settings:saveSetting("return_to_home", true)
         self.settings:flush()
@@ -56,8 +56,8 @@ function ReadingHome:onReadingHome()
         return true
     end
     if self.home then return true end
-    local Library = require("readinghome_library")
-    local Screen = require("readinghome_screen")
+    local Library = require("kindlevel_library")
+    local Screen = require("kindlevel_screen")
     local library = Library:new{ root = self:getRoot() }
     library:scan()
     self.home = Screen:new{
@@ -69,7 +69,7 @@ function ReadingHome:onReadingHome()
     return true
 end
 
-function ReadingHome:openBook(book)
+function Kindlevel:openBook(book)
     if not book or lfs.attributes(book.file, "mode") ~= "file" then
         UIManager:show(InfoMessage:new{ text = "This book has moved or is no longer available. Refresh your library." })
         return
@@ -82,7 +82,7 @@ function ReadingHome:openBook(book)
     ReaderUI:showReader(book.file)
 end
 
-function ReadingHome:chooseFolder()
+function Kindlevel:chooseFolder()
     local root = self:getRoot()
     local chooser = PathChooser:new{
         path = lfs.attributes(root, "mode") == "directory" and root or "/mnt/us/documents",
@@ -96,7 +96,7 @@ function ReadingHome:chooseFolder()
     UIManager:show(chooser)
 end
 
-function ReadingHome:setRoot(path)
+function Kindlevel:setRoot(path)
     self.settings:saveSetting("library_root", path)
     self.settings:delSetting("selected_file")
     self.settings:flush()
@@ -106,14 +106,14 @@ function ReadingHome:setRoot(path)
     end
 end
 
-function ReadingHome:useSamples()
+function Kindlevel:useSamples()
     self:setRoot(self.plugin_dir .. "/books")
 end
 
-function ReadingHome:toggleAutoHome()
+function Kindlevel:toggleAutoHome()
     self.settings:saveSetting("auto_home", not self.settings:isTrue("auto_home"))
     self.settings:flush()
     if self.home then self.home:rebuild() end
 end
 
-return ReadingHome
+return Kindlevel

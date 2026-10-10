@@ -1,5 +1,5 @@
 The Long Way Home
-Reading Home
+Kindlevel
 
 1. The turn
 
@@ -23,4 +23,4 @@ He put his keys on the table, made tea, and opened the book again. There was sti
 
 About this sample
 
-This is an original plain-text sample, included to let you try a second document format. Reading Home opens it through KOReader, just like the EPUB samples. Its cover sits beside the text file.
+This is an original plain-text sample, included to let you try a second document format. Kindlevel opens it through KOReader, just like the EPUB samples. Its cover sits beside the text file.

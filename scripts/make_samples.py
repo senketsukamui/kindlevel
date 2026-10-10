@@ -5,7 +5,7 @@ from pathlib import Path
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-BOOKS = ROOT / "readinghome.koplugin" / "books"
+BOOKS = ROOT / "kindlevel.koplugin" / "books"
 
 QUIET = [
     ("A place to begin", [
@@ -32,24 +32,24 @@ QUIET = [
 
 NOTES = [
     ("Try the reading screen", [
-        "This is a small original book included with Reading Home. It gives you something to open immediately, before choosing a folder for your own books. The library and carousel contain actual readable files.",
-        "While reading, turn a few pages. Adjust the font size if you wish. KOReader handles the book text, layout, selection, and reading position. When you return to Reading Home, the progress indicator reflects the position KOReader saved.",
-        "To return, open KOReader's main menu and choose Reading Home in the tools section. That action saves and closes the book through KOReader's normal navigation. Your next visit can continue from the same place.",
+        "This is a small original book included with Kindlevel. It gives you something to open immediately, before choosing a folder for your own books. The library and carousel contain actual readable files.",
+        "While reading, turn a few pages. Adjust the font size if you wish. KOReader handles the book text, layout, selection, and reading position. When you return to Kindlevel, the progress indicator reflects the position KOReader saved.",
+        "To return, open KOReader's main menu and choose Kindlevel in the tools section. That action saves and closes the book through KOReader's normal navigation. Your next visit can continue from the same place.",
     ]),
     ("Make the library yours", [
         "On the home screen, tap Library to see the files in the selected folder. Tap a book to bring it into the reading carousel. The cover or the reading button opens it. Swipe left or right to move between books.",
-        "To add your own books, copy readable files to a folder on your Kindle using USB. In Reading Home, choose Settings, then Choose books folder. Navigate to your folder and long-press its name to select it. Nested folders are included.",
+        "To add your own books, copy readable files to a folder on your Kindle using USB. In Kindlevel, choose Settings, then Choose books folder. Navigate to your folder and long-press its name to select it. Nested folders are included.",
         "The application asks KOReader which files it can open. A book without an embedded cover receives a simple typographic cover. You can return to the sample library from Settings whenever you want.",
     ]),
     ("A few things to try", [
         "Try a long title, a book in a different language, and a PDF alongside an EPUB. Check that the text remains readable and that you can move through the library comfortably. This first version is intended to be tried on the device.",
-        "You can leave Reading Home with the cross in its top right corner. That takes you back to KOReader's normal file browser. Enabling Show home on file browser entry makes the custom home appear when that browser opens.",
+        "You can leave Kindlevel with the cross in its top right corner. That takes you back to KOReader's normal file browser. Enabling Show home on file browser entry makes the custom home appear when that browser opens.",
         "Everything in this version is local. No account or server is needed. Your observations about spacing, cover sizes, navigation, and the reading transition will guide the next version.",
     ]),
 ]
 
 LONG_WAY = """The Long Way Home
-Reading Home
+Kindlevel
 
 1. The turn
 
@@ -73,12 +73,12 @@ He put his keys on the table, made tea, and opened the book again. There was sti
 
 About this sample
 
-This is an original plain-text sample, included to let you try a second document format. Reading Home opens it through KOReader, just like the EPUB samples. Its cover sits beside the text file.
+This is an original plain-text sample, included to let you try a second document format. Kindlevel opens it through KOReader, just like the EPUB samples. Its cover sits beside the text file.
 """
 
 
 def epub(title, chapters):
-    identifier = "reading-home-" + title.lower().replace(" ", "-")
+    identifier = "kindlevel-" + title.lower().replace(" ", "-")
     filename = BOOKS / (title + ".epub")
     cover = BOOKS / (title + ".cover.png")
     if not cover.exists():
@@ -90,7 +90,7 @@ def epub(title, chapters):
         archive.writestr("META-INF/container.xml", '<?xml version="1.0"?><container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>')
         archive.writestr("OEBPS/content.opf", f'''<?xml version="1.0" encoding="UTF-8"?>
 <package xmlns="http://www.idpf.org/2007/opf" version="2.0" unique-identifier="book-id">
-<metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:identifier id="book-id">{identifier}</dc:identifier><dc:title>{escape(title)}</dc:title><dc:creator>Reading Home</dc:creator><dc:language>en</dc:language><meta name="cover" content="cover"/></metadata>
+<metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:identifier id="book-id">{identifier}</dc:identifier><dc:title>{escape(title)}</dc:title><dc:creator>Kindlevel</dc:creator><dc:language>en</dc:language><meta name="cover" content="cover"/></metadata>
 <manifest><item id="text" href="book.xhtml" media-type="application/xhtml+xml"/><item id="cover" href="cover.png" media-type="image/png"/><item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/></manifest>
 <spine toc="ncx"><itemref idref="text"/></spine></package>''')
         archive.writestr("OEBPS/book.xhtml", f'<?xml version="1.0" encoding="UTF-8"?><html xmlns="http://www.w3.org/1999/xhtml"><head><title>{escape(title)}</title><style>body{{line-height:1.5}}section{{page-break-before:always}}h1{{font-size:1.6em}}p{{text-indent:1em}}</style></head><body>{body}</body></html>')

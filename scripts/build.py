@@ -5,14 +5,14 @@ import hashlib
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-PLUGIN = ROOT / "readinghome.koplugin"
-VERSION = "0.1.0"
+PLUGIN = ROOT / "kindlevel.koplugin"
+VERSION = "0.1.1"
 
 
 def main():
     output = ROOT / "dist"
     output.mkdir(exist_ok=True)
-    target = output / f"reading-home-{VERSION}.zip"
+    target = output / f"kindlevel-{VERSION}.zip"
     files = sorted(p for p in PLUGIN.rglob("*") if p.is_file() and p.name != ".DS_Store"
                    and not any(part.endswith(".sdr") for part in p.parts))
     if not files or not (PLUGIN / "books" / "A Quiet Beginning.epub").exists():
@@ -21,7 +21,7 @@ def main():
         for path in files:
             archive.write(path, path.relative_to(ROOT))
         archive.write(ROOT / "README.md", "INSTALL.txt")
-        archive.write(ROOT / "LICENSE", "readinghome.koplugin/LICENSE")
+        archive.write(ROOT / "LICENSE", "kindlevel.koplugin/LICENSE")
     checksum = hashlib.sha256(target.read_bytes()).hexdigest()
     target.with_suffix(".zip.sha256").write_text(f"{checksum}  {target.name}\n")
     print(f"Built {target}: {len(files)} plugin files, {target.stat().st_size:,} bytes")

@@ -65,7 +65,7 @@ function Library:scan()
         end)
         if not ok then
             self.warnings.unreadable = true
-            logger.warn("Reading Home: cannot scan", path, err)
+            logger.warn("Kindlevel: cannot scan", path, err)
         end
     end
     local root = self.root:gsub("/+$", "")
@@ -110,7 +110,7 @@ function Library:inspect(book)
             end
         end)
         if doc then pcall(doc.close, doc) end
-        if not ok then logger.warn("Reading Home: metadata unavailable", book.file, err) end
+        if not ok then logger.warn("Kindlevel: metadata unavailable", book.file, err) end
     end
     if type(book.author) == "table" then book.author = table.concat(book.author, ", ") end
     if not book.author or book.author == "" then book.author = book.format .. " document" end
@@ -134,7 +134,7 @@ function Library:cover(book)
         image = doc:getCoverPageImage()
     end)
     if doc then pcall(doc.close, doc) end
-    if not ok then logger.warn("Reading Home: cover unavailable", book.file, err) end
+    if not ok then logger.warn("Kindlevel: cover unavailable", book.file, err) end
     if image then return { image = image } end
 end
 
