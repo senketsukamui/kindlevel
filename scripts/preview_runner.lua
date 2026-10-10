@@ -56,6 +56,7 @@ require("apps/filemanager/filemanager").instance.kindlevel:onKindlevel("stats")
 
 local sequence = 0
 local frame = 0
+local Toasts = require("kindlevel_achievement_toast")
 local function capture()
     frame = frame + 1
     UIManager:forceRePaint()
@@ -63,10 +64,11 @@ local function capture()
     assert(os.rename(ipc .. "/screen.next.png", ipc .. "/screen.png"))
     local f = assert(io.open(ipc .. "/state.next.json", "w"))
     f:write(json.encode{ sequence = sequence, frame = frame, width = Device.screen:getWidth(), height = Device.screen:getHeight(),
-        demo = config.demo, rendered = os.time() })
+        demo = config.demo, rendered = os.time(), achievement_toast = Toasts.active and Toasts.active.achievement.id or false })
     f:close()
     assert(os.rename(ipc .. "/state.next.json", ipc .. "/state.json"))
 end
+Toasts.observer = function() UIManager:scheduleIn(0.05, capture) end
 
 local function poll()
     local commands = {}

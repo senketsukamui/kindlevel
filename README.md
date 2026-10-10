@@ -90,6 +90,16 @@ The year goal counts **confirmed finished books**, once per book per calendar ye
 
 Tap `×` next to a finished book in the goal view to remove it from that year, then confirm. That exclusion prevents automatic reimport; an explicit Record finish adds it back. Changing dates or removing a goal entry does not modify KOReader’s statistics database or its original Finished status. Previously unobserved completions cannot be recovered automatically if their sidecars have been deleted or their status/date has since changed.
 
+## Achievement proof of concept (development)
+
+Tap the **badge icon** beside Settings, or choose **Tools → Kindlevel achievements**. Four sample achievements show progress from your existing history. Tap **Preview →** on a card to replay its notification. **Try over a book →** opens the selected local book and shows the notification over KOReader's actual reading screen.
+
+While reading, **Tools → Preview achievement notification** lets you choose and replay a sample without closing the book. The card appears in the upper-right corner for four seconds, or until the next gesture/key. That input continues to the reader, so a page turn is not swallowed. Multiple previews queue sequentially.
+
+This is a visual prototype. XP amounts are illustrative, previewing does not save unlocks or XP, and there is no automatic achievement awarding or character progression yet. Progress bars reflect the current history, including the current reading streak. The Mac preview renders timed dismissal automatically, so the card disappears without another click.
+
+Tests: `tests/achievements.lua` exercises the actual widgets, timers, queue, and real-reader page turns. With the Mac preview running, `python3 tests/achievements_preview.py` checks the live display, automatic repaint, and clean dismissal.
+
 ## Preview and debug on a Mac
 
 Requires **Python 3.12+** and a running **Docker Desktop**. Run from the repository root:
