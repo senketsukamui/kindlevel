@@ -168,11 +168,17 @@ end
 
 function View:statsMonthLink()
     local p = self:px(28)
-    self:text("Book calendar →", p, self:px(707), self.width - 2 * p, self:px(22), 12,
+    local half = (self.width - 2 * p) / 2
+    self:text("Book calendar →", p, self:px(707), half, self:px(22), 12,
         { center = true, single = true, gray = 60 })
-    self:hit(p, self:px(702), self.width - 2 * p, self:px(27), function()
+    self:hit(p, self:px(702), half, self:px(27), function()
         self:statsNavigate("month"); self:rebuild()
     end, "book-calendar")
+    self:text("Return statistics →", p + half, self:px(707), half, self:px(22), 12,
+        { center = true, single = true, gray = 60 })
+    self:hit(p + half, self:px(702), half, self:px(27), function()
+        self:statsNavigate("recovery"); self.stats_list_page = 1; self:rebuild()
+    end, "return-statistics")
 end
 
 function View:statsOpenDay(key)
@@ -273,10 +279,15 @@ function View:statsBook()
     self:statsChart(series, self:px(51), self:px(477), self.width - self:px(84), self:px(157))
     local period = book.first and os.date("%d %b %Y", book.first) .. " → " .. os.date("%d %b %Y", book.last) or ""
     self:text(period, p, self:px(664), self.width - 2 * p, self:px(22), 11, { center = true, single = true, gray = 100 })
+    local half = (self.width - 2 * p) / 2
+    self:text("Book journey →", p, self:px(700), half, self:px(24), 13, { center = true, single = true })
+    self:hit(p, self:px(694), half, self:px(30), function()
+        self:statsNavigate("journey"); self.stats_list_page = 1; self:rebuild()
+    end, "book-journey")
     if self.owner.recordFinish then
-        self:text("Record finish →", p, self:px(700), self.width - 2 * p, self:px(24), 13,
+        self:text("Record finish →", p + half, self:px(700), half, self:px(24), 13,
             { center = true, single = true })
-        self:hit(p, self:px(694), self.width - 2 * p, self:px(30), function()
+        self:hit(p + half, self:px(694), half, self:px(30), function()
             self.owner:recordFinish(book)
         end, "record-finish")
     end
@@ -304,7 +315,9 @@ function View:statsBooks()
 end
 
 function View:statsPanel()
-    if self.stats_view == "month" then self:statsMonth()
+    if self.stats_view == "journey" then self:statsJourney()
+    elseif self.stats_view == "recovery" then self:statsRecovery()
+    elseif self.stats_view == "month" then self:statsMonth()
     elseif self.stats_view == "goal" then self:statsGoal()
     elseif self.stats_view == "day" then self:statsDay()
     elseif self.stats_view == "book" then self:statsBook()
@@ -314,7 +327,13 @@ end
 
 function View:statsNext(direction)
     local stats = self.owner:getStats()
-    if self.stats_view == "day" then
+    if self.stats_view == "journey" or self.stats_view == "recovery" then
+        local Journey = require("kindlevel_journey")
+        local history = Journey:new(stats)
+        local count = self.stats_view == "journey" and #history:book(self.stats_book_id, self:journeyThreshold()).episodes
+            or #history:recovery(self:journeyThreshold(), self.stats_recovery_mode).returns
+        self.stats_list_page = math.max(1, math.min(math.max(1, math.ceil(count / 3)), self.stats_list_page + direction))
+    elseif self.stats_view == "day" then
         local next_day = Stats.day(Stats.date(self.stats_date), direction)
         if next_day <= Stats.day(stats.now) then self.stats_date = os.date("%Y-%m-%d", next_day) end
         self.stats_list_page = 1
@@ -334,5 +353,6 @@ function View:statsNext(direction)
 end
 
 for name, method in pairs(require("kindlevel_calendar")) do View[name] = method end
+for name, method in pairs(require("kindlevel_journey_screen")) do View[name] = method end
 
 return View

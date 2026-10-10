@@ -92,6 +92,7 @@ function Stats:refresh()
     self.loaded = false
     self.days, self.books = {}, {}
     self.months = {}
+    self.journey_days = nil
     return self:load()
 end
 
