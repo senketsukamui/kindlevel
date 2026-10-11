@@ -64,26 +64,20 @@ function View:achievementPanel()
             self:text(tostring(item.xp) .. " XP", self.width - p - self:px(81), y + self:px(5), self:px(81), self:px(23), 11,
                 { center = true, single = true, gray = 95 })
             self:text(item.description, tx, y + self:px(31), tw, self:px(30), 11, { gray = 90 })
-            self:rect(tx, y + self:px(65), tw - self:px(83), self:px(2), 227)
-            self:rect(tx, y + self:px(65), math.floor((tw - self:px(83)) * (unlock and 1 or progress.ratio)), self:px(2), unlock and 35 or 145)
+            self:rect(tx, y + self:px(65), tw, self:px(2), 227)
+            self:rect(tx, y + self:px(65), math.floor(tw * (unlock and 1 or progress.ratio)), self:px(2), unlock and 35 or 145)
             self:text(unlock and "Unlocked · " .. os.date("%d %b %Y", unlock.unlocked_at) or progress.label,
-                tx, y + self:px(73), tw - self:px(87), self:px(19), 9, { single = true, gray = unlock and 55 or 100 })
-            self:text("Preview →", self.width - p - self:px(82), y + self:px(68), self:px(82), self:px(24), 11, { single = true })
-            self:hit(self.width - p - self:px(86), y + self:px(61), self:px(86), self:px(34), function()
-                self.owner:previewAchievement(item.id)
-            end, "preview-achievement-" .. item.id)
-            self:hit(p, y, width - self:px(90), self:px(93), function()
+                tx, y + self:px(73), tw, self:px(19), 9, { single = true, gray = unlock and 55 or 100 })
+            self:hit(p, y, width, self:px(93), function()
                 self:achievementDetails(item, progress, unlock)
             end, "achievement-details-" .. item.id)
         end
     end
     if #items == 0 then self:text("No achievements in this view yet.", p, self:px(400), width, self:px(60), 19, { center = true, gray = 90 }) end
-    self:button("‹", p, self:px(671), self:px(49), self:px(30), function() self:achievementNext(-1) end, false, "achievements-previous")
-    self:text(string.format("%d / %d · Swipe to browse", self.achievement_page, pages), p + self:px(60), self:px(677), width - self:px(120), self:px(23), 11,
+    self:button("‹", p, self:px(695), self:px(49), self:px(30), function() self:achievementNext(-1) end, false, "achievements-previous")
+    self:text(string.format("%d / %d · Swipe to browse", self.achievement_page, pages), p + self:px(60), self:px(701), width - self:px(120), self:px(23), 11,
         { center = true, single = true, gray = 90 })
-    self:button("›", self.width - p - self:px(49), self:px(671), self:px(49), self:px(30), function() self:achievementNext(1) end, false, "achievements-next")
-    self:text("Try over a book →", p, self:px(711), width, self:px(23), 13, { center = true, single = true })
-    self:hit(p, self:px(704), width, self:px(26), function() self.owner:previewAchievementInBook() end, "achievement-in-book")
+    self:button("›", self.width - p - self:px(49), self:px(695), self:px(49), self:px(30), function() self:achievementNext(1) end, false, "achievements-next")
 end
 
 return View
