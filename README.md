@@ -4,7 +4,7 @@ A reading home for KOReader, built for jailbroken Kindles. Browse your library, 
 
 Works offline. No account or server required. KOReader handles document rendering, saved positions and reading activity.
 
-[Download v0.4.0](https://github.com/senketsukamui/kindlevel/releases/download/v0.4.0/kindlevel-0.4.0.zip) · [Current source](https://github.com/senketsukamui/kindlevel/archive/refs/heads/main.zip)
+[Download v0.5.0](https://github.com/senketsukamui/kindlevel/releases/download/v0.5.0/kindlevel-0.5.0.zip) · [Current source](https://github.com/senketsukamui/kindlevel/archive/refs/heads/main.zip)
 
 ## Features
 
@@ -16,7 +16,7 @@ Works offline. No account or server required. KOReader handles document renderin
 - **Achievements:** 42 badges covering milestones, habits and book quests, with corner notifications and support for custom definitions.
 - **Multiple formats:** EPUB, PDF, MOBI, FB2, TXT and other documents supported by your KOReader installation.
 
-**Early development:** v0.4.0 includes all the features listed above. XP is reserved for future progression.
+**Early development:** v0.5.0 includes all the features listed above and Wi-Fi updates. XP is reserved for future progression.
 
 ## Install
 
@@ -32,6 +32,10 @@ Three original sample books are included. To use your own library, open **Settin
 To open Kindlevel automatically, enable **Show home on file browser entry** in its settings and set KOReader’s **Start with** option to **file browser**.
 
 Kindlevel reads the existing statistics database through read-only connections and stores its goals and achievement unlocks separately. Reading positions stay in KOReader’s document settings.
+
+## Wi-Fi updates
+
+Install v0.5.0 over USB once if you use v0.4.0 or earlier. After that, use **Settings → Check for updates** or **Tools → Kindlevel updates** to install newer stable GitHub releases over Wi-Fi. Downloads are verified, custom achievements and icons are preserved, and KOReader restarts after installation. [Update guide](docs/UPDATES.md).
 
 ## Development
 

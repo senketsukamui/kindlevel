@@ -59,6 +59,89 @@ function Kindlevel:addToMainMenu(items)
         text = "Preview achievement notification", sorting_hint = "more_tools",
         callback = function() self:chooseAchievementPreview() end,
     }
+    items.kindlevel_updates = {
+        text = "Kindlevel updates", sorting_hint = "more_tools",
+        callback = function() self:checkForUpdates() end,
+    }
+end
+
+function Kindlevel:getUpdater()
+    if not self.updater then self.updater=require("kindlevel_updater"):new{
+        plugin_dir=self.plugin_dir,work_dir=DataStorage:getDataDir() .. "/kindlevel-updates",
+    } end
+    return self.updater
+end
+
+local function updateNetworkJob(task,message,callback)
+    local updater=require("kindlevel_updater")
+    if updater.busy then UIManager:show(InfoMessage:new{text="An update operation is already running."});return end
+    require("ui/network/manager"):runWhenOnline(function()
+        if updater.busy then return end
+        updater.busy=true
+        local reader=require("apps/reader/readerui").instance
+        if reader then reader:handleEvent(require("ui/event"):new("ReadingPaused")) end
+        require("ui/trapper"):wrap(function()
+            local ok,completed,result,err=pcall(function()
+                return require("ui/trapper"):dismissableRunInSubprocess(task,message)
+            end)
+            if reader and require("apps/reader/readerui").instance==reader then
+                reader:handleEvent(require("ui/event"):new("ReadingResumed"))
+            end
+            updater.busy=false
+            require("ui/network/manager"):afterWifiAction()
+            if not ok then callback(nil,"The update operation failed. Try again.")
+            elseif completed then callback(result,err)
+            else callback(nil,nil,true) end
+        end)
+    end)
+end
+
+function Kindlevel:checkForUpdates()
+    local core=self:getUpdater()
+    updateNetworkJob(function() return core:check() end,"Checking for Kindlevel updates…",function(release,err,cancelled)
+        if cancelled then return end
+        if not release then UIManager:show(InfoMessage:new{text=err or "Cannot check for updates."});return end
+        if not release.newer then
+            UIManager:show(InfoMessage:new{text="Kindlevel " .. core.installed .. "\nLatest stable release: " .. release.version .. "\n\nNo newer release is available."})
+            return
+        end
+        UIManager:show(require("ui/widget/confirmbox"):new{
+            text=string.format("Update Kindlevel?\n\nInstalled: %s\nAvailable: %s%s\n\nYour reading history and custom achievements will be kept. KOReader will restart after installation.",core.installed,release.version,
+                release.size and string.format("\nDownload: %.0f KB",release.size/1024) or ""),
+            ok_text="Install & restart",ok_callback=function() self:installUpdate(release) end,
+        })
+    end)
+end
+
+function Kindlevel:installUpdate(release)
+    local core=self:getUpdater()
+    updateNetworkJob(function() return core:prepare(release) end,"Downloading and checking Kindlevel…",function(prepared,err,cancelled)
+        if not prepared then
+            core:cleanup()
+            if not cancelled then UIManager:show(InfoMessage:new{text=err or "Cannot prepare the update."}) end
+            return
+        end
+        local info=InfoMessage:new{text="Installing Kindlevel…",dismissable=false}
+        UIManager:show(info);UIManager:forceRePaint();UIManager:preventStandby()
+        local ok,installed,install_err=pcall(function()
+            local reader=require("apps/reader/readerui").instance
+            if reader then reader:onClose() -- normal save/close path, including sample-book sidecars
+            else
+                local manager=require("apps/filemanager/filemanager").instance
+                if manager and manager.kindlevel then manager.kindlevel.settings:flush() end
+            end
+            G_reader_settings:flush()
+            require("kindlevel_achievement_toast"):clear()
+            return core:activate(release)
+        end)
+        UIManager:allowStandby();UIManager:close(info)
+        if not ok or not installed then
+            core:cleanup()
+            UIManager:show(InfoMessage:new{text=ok and install_err or "Cannot install the update. Your previous plugin has been kept."})
+            return
+        end
+        UIManager:restartKOReader()
+    end)
 end
 
 function Kindlevel:previewAchievement(id)

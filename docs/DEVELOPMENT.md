@@ -2,6 +2,8 @@
 
 Run commands from the repository root unless noted otherwise.
 
+Kindlevel v0.5.0 includes [Wi-Fi updates](UPDATES.md). The installed version and release filenames come from `kindlevel.koplugin/kindlevel_version.lua`.
+
 ## Preview and debug on a Mac
 
 Requires **Python 3.12+** and a running **Docker Desktop**. Run from the repository root:
