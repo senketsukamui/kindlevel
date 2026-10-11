@@ -345,7 +345,7 @@ function Home:settingsPanel()
     for i, action in ipairs(actions) do
         self:button(action[1], p, self:px(300 + (i - 1) * 45), w - 2 * p, self:px(39), action[2], false, action[3])
     end
-    local note = "Kindlevel 0.3.0 · Your reading, at a glance."
+    local note = "Kindlevel 0.4.0 · Your reading, at a glance."
     if next(self.library.warnings) then note = note .. "\nSome folders were skipped; choose a smaller books folder." end
     self:text(note, p, self:px(670), w - 2 * p, self:px(45), 12, { center = true, gray = 95 })
 end

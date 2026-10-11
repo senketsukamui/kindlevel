@@ -79,7 +79,7 @@ Tap `×` next to a finished book in the goal view to remove it from that year, t
 
 ## Book journeys and returns
 
-These features are in the development source and Mac preview; they are not in the linked v0.3.0 release.
+These features are included in Kindlevel v0.4.0 and the Mac preview.
 
 A return is recorded when reading resumes after at least **3 full local calendar days** without recorded activity. The shared break selector offers 3, 7, or 14 days and saves the choice in Kindlevel’s preferences. An ongoing break does not count as a return. **Returning to reading** checks activity across every book; **Returning to books** checks each book independently, so reading another book does not end that book’s break. Counts cover all recorded history, with a separate last-30-days count. Typical break is the median length of completed qualifying breaks.
 

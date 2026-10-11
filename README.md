@@ -4,7 +4,7 @@ A reading home for KOReader, built for jailbroken Kindles. Browse your library, 
 
 Works offline. No account or server required. KOReader handles document rendering, saved positions and reading activity.
 
-[Download v0.3.0](https://github.com/senketsukamui/kindlevel/releases/download/v0.3.0/kindlevel-0.3.0.zip) · [Current source](https://github.com/senketsukamui/kindlevel/archive/refs/heads/main.zip)
+[Download v0.4.0](https://github.com/senketsukamui/kindlevel/releases/download/v0.4.0/kindlevel-0.4.0.zip) · [Current source](https://github.com/senketsukamui/kindlevel/archive/refs/heads/main.zip)
 
 ## Features
 
@@ -16,7 +16,7 @@ Works offline. No account or server required. KOReader handles document renderin
 - **Achievements:** 42 badges covering milestones, habits and book quests, with corner notifications and support for custom definitions.
 - **Multiple formats:** EPUB, PDF, MOBI, FB2, TXT and other documents supported by your KOReader installation.
 
-**Early development:** v0.3.0 includes the library, statistics, calendars and goals. Book journeys, achievements and the redesigned header are available in the current source. XP is reserved for future progression.
+**Early development:** v0.4.0 includes all the features listed above. XP is reserved for future progression.
 
 ## Install
 

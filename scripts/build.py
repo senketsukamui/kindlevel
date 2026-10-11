@@ -6,7 +6,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 PLUGIN = ROOT / "kindlevel.koplugin"
-VERSION = "0.3.0"
+VERSION = "0.4.0"
 
 
 def main():
@@ -21,6 +21,10 @@ def main():
         for path in files:
             archive.write(path, path.relative_to(ROOT))
         archive.write(ROOT / "README.md", "INSTALL.txt")
+        archive.write(ROOT / "README.md", "README.md")
+        for path in sorted((ROOT / "docs").rglob("*.md")):
+            archive.write(path, path.relative_to(ROOT))
+        archive.write(ROOT / "LICENSE", "LICENSE")
         archive.write(ROOT / "LICENSE", "kindlevel.koplugin/LICENSE")
     checksum = hashlib.sha256(target.read_bytes()).hexdigest()
     target.with_suffix(".zip.sha256").write_text(f"{checksum}  {target.name}\n")
