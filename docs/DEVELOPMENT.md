@@ -2,7 +2,7 @@
 
 Run commands from the repository root unless noted otherwise.
 
-Kindlevel v0.5.0 includes [Wi-Fi updates](UPDATES.md). The installed version and release filenames come from `kindlevel.koplugin/kindlevel_version.lua`.
+Kindlevel v0.5.0 includes [Wi-Fi updates](UPDATES.md). The current development version, `0.6.0-dev`, adds [dashboard pairing and statistics sync](DASHBOARD.md). The installed version and release filenames come from `kindlevel.koplugin/kindlevel_version.lua`.
 
 ## Preview and debug on a Mac
 

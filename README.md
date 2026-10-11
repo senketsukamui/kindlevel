@@ -39,6 +39,18 @@ Install v0.5.0 over USB once if you use v0.4.0 or earlier. After that, use **Set
 
 ## Development
 
+### Web dashboard preview
+
+A Go/Svelte dashboard with owner login and Kindle statistics sync is available as one Docker container:
+
+```sh
+docker compose up --build -d
+```
+
+Open **http://localhost:8080** and create your account using the setup code from `docker compose exec kindlevel cat /data/setup-code`. Pair a Kindle from **Your Kindle** to replace demo data with your books, statistics and achievements. Server sync requires the current development plugin; v0.5.0 does not include it. [Setup, LAN testing and HTTPS deployment](docs/DASHBOARD.md).
+
+### Kindle plugin preview
+
 Preview the actual KOReader interface on your computer with Python 3.12+ and Docker:
 
 ```sh
