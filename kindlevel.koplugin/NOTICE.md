@@ -3,3 +3,5 @@ Kindlevel's statistics queries and preview database schema are based on the KORe
 Upstream source: https://github.com/koreader/koreader/tree/master/plugins/statistics.koplugin
 
 KOReader continues to record reading activity. Kindlevel reads its statistics.sqlite3 database and provides its own presentation. It does not include a second activity collector.
+
+Achievement categories were informed by Reading Insights (https://github.com/peterboda236/readinginsights.koplugin) and ReadMastery (https://github.com/Lalocaballero/readmastery.koplugin). The achievement engine, definitions, interface and monochrome SVG badges in Kindlevel are original implementations; no code or artwork from those projects is included.

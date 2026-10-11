@@ -436,7 +436,8 @@ function Home:rememberSelection()
 end
 
 function Home:onNext()
-    if self.tab == "stats" then return self:statsNext(1)
+    if self.tab == "achievements" then return self:achievementNext(1)
+    elseif self.tab == "stats" then return self:statsNext(1)
     elseif self.tab == "library" then
         self.page = math.min(math.max(1, math.ceil(#self.library.books / 6)), self.page + 1)
     elseif self.tab == "read" then
@@ -448,7 +449,8 @@ function Home:onNext()
 end
 
 function Home:onPrevious()
-    if self.tab == "stats" then return self:statsNext(-1)
+    if self.tab == "achievements" then return self:achievementNext(-1)
+    elseif self.tab == "stats" then return self:statsNext(-1)
     elseif self.tab == "library" then self.page = math.max(1, self.page - 1)
     elseif self.tab == "read" then
         self.index = math.max(1, self.index - 1)

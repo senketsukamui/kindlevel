@@ -9,6 +9,7 @@ local UIManager = require("ui/uimanager")
 local WidgetContainer = require("ui/widget/container/widgetcontainer")
 local ffiUtil = require("ffi/util")
 local lfs = require("libs/libkoreader-lfs")
+local logger = require("logger")
 
 local Kindlevel = WidgetContainer:extend{
     name = "kindlevel",
@@ -34,6 +35,9 @@ function Kindlevel:init()
                 if FileManager.instance == self.ui then self:onKindlevel() end
             end)
         end
+        UIManager:nextTick(function()
+            if require("apps/filemanager/filemanager").instance == self.ui and not require("apps/reader/readerui").instance then self:checkAchievements() end
+        end)
     end
 end
 
@@ -65,14 +69,15 @@ end
 
 function Kindlevel:chooseAchievementPreview()
     local catalog = require("kindlevel_achievements")
-    local dialog, buttons = nil, {}
+    local dialog, items = nil, {}
     for _, item in ipairs(catalog.catalog) do
-        buttons[#buttons + 1] = { { text = item.title, callback = function()
+        items[#items + 1] = { text = item.title, callback = function()
             UIManager:close(dialog)
             UIManager:scheduleIn(0.1, function() self:previewAchievement(item.id) end)
-        end } }
+        end }
     end
-    dialog = ButtonDialog:new{ title = "Preview an achievement", buttons = buttons }
+    dialog = require("ui/widget/menu"):new{ title = "Preview an achievement", item_table = items,
+        close_callback = function() UIManager:close(dialog) end }
     UIManager:show(dialog)
 end
 
@@ -103,6 +108,7 @@ function Kindlevel:onKindlevel(tab)
         return true
     end
     if self.home then
+        self:checkAchievements()
         if tab then self.home.tab = tab; self.home:rebuild() end
         return true
     end
@@ -122,6 +128,7 @@ function Kindlevel:onKindlevel(tab)
     self.settings:delSetting("open_tab")
     self.settings:flush()
     UIManager:show(self.home, "full")
+    self:checkAchievements(true, false)
     return true
 end
 
@@ -135,13 +142,96 @@ end
 function Kindlevel:refreshStats()
     self:getStats():refresh()
     self.goals_imported = false
+    self:checkAchievements(true, false)
     if self.home then self.home:rebuild() end
+end
+
+function Kindlevel:getAchievementContext()
+    if not self.achievement_context then self:checkAchievements(false) end
+    return self.achievement_context or require("kindlevel_achievements").context(self)
+end
+
+function Kindlevel:checkAchievements(notify, refresh)
+    if self._achievement_stopped then return end
+    local collector = self.ui.document and self.ui.statistics
+    if collector and collector.onSaveSettings then
+        local ok, err = pcall(collector.onSaveSettings, collector)
+        if not ok then logger.warn("Kindlevel: statistics flush failed", err) end
+    end
+    if refresh ~= false then self:getStats():refresh() end
+    local achievements = require("kindlevel_achievements")
+    local ok, fresh, context = pcall(achievements.check, self, notify ~= false)
+    if not ok then logger.warn("Kindlevel: achievement check failed", fresh); return end
+    self.achievement_context = context
+    self._achievement_last_check = os.time()
+    for _, item in ipairs(fresh) do require("kindlevel_achievement_toast"):unlock(item, self.plugin_dir) end
+    -- The achievement screen reads this cache, so repainting does not re-run triggers.
+    if self.home and self.home.tab == "achievements" then self.home:rebuild() end
+end
+
+function Kindlevel:scheduleAchievementCheck(force)
+    if self._achievement_stopped or self._achievement_pending then return end
+    if not force and self._achievement_last_check and os.time() - self._achievement_last_check < 30 then return end
+    self._achievement_pending = function()
+        self._achievement_pending = nil
+        local reader = require("apps/reader/readerui").instance
+        local manager = require("apps/filemanager/filemanager").instance
+        if reader == self.ui or not reader and manager == self.ui then self:checkAchievements() end
+    end
+    -- Wait until all native event handlers have updated their counters.
+    UIManager:scheduleIn(0.1, self._achievement_pending)
+end
+
+function Kindlevel:onReaderReady()
+    if not self._achievement_reader_ready then
+        self._achievement_reader_ready=true
+        local props=self.ui.doc_props or {}
+        local authors=props.authors
+        if type(authors)=="table" then authors=table.concat(authors,", ") end
+        local achievements=require("kindlevel_achievements")
+        achievements.recordSessionBreak(self)
+        achievements.recordOpen(self,{title=props.title or props.display_title,author=authors})
+    end
+    self:scheduleAchievementCheck(true)
+end
+function Kindlevel:onPageUpdate() self:scheduleAchievementCheck(false) end
+function Kindlevel:onPosUpdate() self:scheduleAchievementCheck(false) end
+function Kindlevel:onAnnotationsModified() self:scheduleAchievementCheck(true) end
+function Kindlevel:onSaveSettings()
+    self.goals_imported = false
+    self:scheduleAchievementCheck(true)
+end
+function Kindlevel:onBookMetadataChanged()
+    self.goals_imported = false
+    self:scheduleAchievementCheck(true)
+end
+function Kindlevel:onResume() self:scheduleAchievementCheck(true) end
+
+function Kindlevel:cancelAchievementCheck()
+    if self._achievement_pending then UIManager:unschedule(self._achievement_pending); self._achievement_pending = nil end
+end
+
+function Kindlevel:onSuspend()
+    if self.ui.document then require("kindlevel_achievements").recordSessionBreak(self) end
+    self:cancelAchievementCheck()
+    require("kindlevel_achievement_toast"):clear()
+end
+
+function Kindlevel:onCloseDocument()
+    require("kindlevel_achievements").recordSessionBreak(self)
+    self._achievement_stopped = true
+    self:cancelAchievementCheck()
+end
+
+function Kindlevel:onReadingPaused()
+    if self.ui.document then require("kindlevel_achievements").recordSessionBreak(self) end
 end
 
 function Kindlevel:getGoals()
     if not self.goals then self.goals = require("kindlevel_goals"):new{ settings = self.settings, stats = self:getStats() } end
     if not self.goals_imported then
         local files = {}
+        if self.ui.document and self.ui.document.file then files[#files + 1] = self.ui.document.file end
         for _, item in ipairs(require("readhistory").hist or {}) do files[#files + 1] = item.file end
         local library = self.home and self.home.library or self.goal_library
         if library then
@@ -201,6 +291,7 @@ function Kindlevel:recordFinish(book)
                 self:getGoals():record(book, date, "manual")
                 self.settings:flush()
                 UIManager:close(dialog)
+                self:checkAchievements()
                 if self.home then self.home:rebuild() end
             end },
         } },

@@ -73,6 +73,12 @@ UIManager:scheduleIn(0.7, function()
     local owner = FileManager.instance.kindlevel
     UIManager:forceRePaint()
     Device.screen.bb:writePNG("/workspace/dist/previews/achievements.png")
+    owner:chooseAchievementPreview()
+    local chooser = UIManager:getTopmostVisibleWidget()
+    assert(chooser.item_table and #chooser.item_table == 42, "native preview chooser handles the expanded catalog")
+    UIManager:forceRePaint()
+    Device.screen.bb:writePNG("/workspace/dist/previews/achievement-preview-chooser.png")
+    UIManager:close(chooser)
     owner:previewAchievementInBook()
     UIManager:scheduleIn(1.2, function()
         local reader = ReaderUI.instance
@@ -83,11 +89,47 @@ UIManager:scheduleIn(0.7, function()
         UIManager:sendEvent(Event:new("Gesture", { ges = "tap", pos = Geom:new{ x = 1000, y = 1000, w = 0, h = 0 } }))
         UIManager:scheduleIn(0.2, function()
             assert(Toasts.active == nil and reader.rolling.current_page > before, "page turns normally when a toast is visible")
-            assert(owner.settings:readSetting("achievement_unlocks") == nil and owner.settings:readSetting("xp") == nil,
-                "preview does not save awards or XP")
-            reader:onClose()
-            UIManager:quit()
-            print("ALL achievement POC checks passed: rendering, timers, queue, input passthrough, real reading, and no saved rewards")
+            local live = reader.kindlevel
+            assert(next(live.settings:readSetting("achievement_unlocks", {})) == nil and live.settings:readSetting("xp") == nil,
+                "preview does not unlock achievements or grant XP")
+            -- Feed the native collector valid buffered page records, then turn a real page.
+            -- Kindlevel must discover these through the normal flush and read-only adapter.
+            local samples, now = {}, os.time()
+            for index = 1, 181 do samples[#samples + 1] = { now - index * 60, 60 } end
+            reader.statistics.page_stat[1] = samples
+            live._achievement_last_check = nil
+            UIManager:sendEvent(Event:new("Gesture", { ges = "tap", pos = Geom:new{ x = 1000, y = 1000, w = 0, h = 0 } }))
+            UIManager:scheduleIn(0.4, function()
+                local unlocks = live.settings:readSetting("achievement_unlocks", {})
+                assert(unlocks.first_pages and Toasts.active and Toasts.active.achievement.id == "first_pages"
+                    and not Toasts.active.preview, "real page activity automatically unlocks and notifies")
+                assert(unlocks.marathon_reader,"the native reader path recognizes a three-hour recorded session")
+                UIManager:forceRePaint()
+                Device.screen.bb:writePNG("/workspace/dist/previews/achievement-earned-over-book.png")
+                Toasts:clear(); live:checkAchievements()
+                assert(Toasts.active == nil and #Toasts.pending == 0, "earned notification is not repeated")
+                assert(live.settings:readSetting("xp") == nil and live.settings:readSetting("level") == nil,
+                    "real unlocks still award no XP or levels")
+                -- Use the original sample's content with test metadata; no external book is needed.
+                reader.doc_props.title="Mein Kampf — Annotated Edition"
+                live._achievement_reader_ready=nil
+                live:onReaderReady()
+                UIManager:scheduleIn(0.3,function()
+                    assert(live.settings:readSetting("achievement_unlocks").dude and Toasts.active
+                        and Toasts.active.achievement.id=="dude","ReaderReady opening quest notifies without reading time")
+                    UIManager:forceRePaint()
+                    Device.screen.bb:writePNG("/workspace/dist/previews/achievement-dude-toast.png")
+                    Toasts:clear(); live:checkAchievements()
+                    assert(not Toasts.active,"opening quest never repeats")
+                    live:scheduleAchievementCheck(true); live:onSuspend()
+                    assert(not live._achievement_pending and #live.settings:readSetting("achievement_session_breaks")>0,
+                        "suspend cancels deferred checks and records a session boundary")
+                    reader:onClose()
+                    assert(live._achievement_stopped and not live._achievement_pending, "closed readers do not keep achievement callbacks")
+                    UIManager:quit()
+                    print("ALL achievement checks passed: native page turns, marathon sessions, book-opening quests, notifications, and unused XP")
+                end)
+            end)
         end)
     end)
 end)

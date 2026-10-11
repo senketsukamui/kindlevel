@@ -2,7 +2,6 @@ local Blitbuffer = require("ffi/blitbuffer")
 local Device = require("device")
 local Font = require("ui/font")
 local Geom = require("ui/geometry")
-local ImageWidget = require("ui/widget/imagewidget")
 local TextWidget = require("ui/widget/textwidget")
 local UIManager = require("ui/uimanager")
 local Widget = require("ui/widget/widget")
@@ -30,15 +29,15 @@ function Toast:init()
         self.resources[#self.resources + 1] = widget
         self.texts[#self.texts + 1] = { widget = widget, x = x, y = y }
     end
-    self.icon = ImageWidget:new{ file = self.plugin_dir .. "/assets/achievement.svg", width = px(48), height = px(48), alpha = true }
+    self.icon = require("kindlevel_achievements").iconWidget(self.achievement, self.plugin_dir, px(48))
     self.resources[#self.resources + 1] = self.icon
     local tx = px(82)
     local tw = self.width - tx - px(15)
     text("ACHIEVEMENT UNLOCKED", tx, px(12), tw, 9, 95, false)
     text(self.achievement.title, tx, px(31), tw, 20, 0, false, true)
     text(self.achievement.notification, tx, px(60), tw, 11, 85, false)
-    text("+" .. tostring(self.achievement.xp) .. " XP", tx, px(86), tw, 11, 25, true)
-    text("PREVIEW", self.width - px(63), px(89), px(55), 8, 145, false)
+    text(tostring(self.achievement.xp) .. " XP · reserved", tx, px(86), tw, 10, 85, false)
+    if self.preview then text("PREVIEW", self.width - px(63), px(89), px(55), 8, 145, false) end
 end
 
 function Toast:paintTo(bb, x, y)
@@ -86,7 +85,7 @@ function Manager:advance()
     if self.active or #self.pending == 0 then return end
     local request = table.remove(self.pending, 1)
     local toast = Toast:new{
-        achievement = request.achievement, plugin_dir = request.plugin_dir, timeout = request.timeout or 4,
+        achievement = request.achievement, plugin_dir = request.plugin_dir, timeout = request.timeout or 4, preview = request.preview,
         on_done = function(widget)
             if self.active == widget then self.active = nil end
             self:changed()
@@ -99,7 +98,12 @@ function Manager:advance()
 end
 
 function Manager:preview(achievement, plugin_dir, timeout)
-    self.pending[#self.pending + 1] = { achievement = achievement, plugin_dir = plugin_dir, timeout = timeout }
+    self.pending[#self.pending + 1] = { achievement = achievement, plugin_dir = plugin_dir, timeout = timeout, preview = true }
+    self:advance()
+end
+
+function Manager:unlock(achievement, plugin_dir)
+    self.pending[#self.pending + 1] = { achievement = achievement, plugin_dir = plugin_dir, preview = false }
     self:advance()
 end
 
