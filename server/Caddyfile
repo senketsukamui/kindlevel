@@ -1,0 +1,3 @@
+{$KINDLEVEL_DOMAIN} {
+    reverse_proxy kindlevel:8080
+}

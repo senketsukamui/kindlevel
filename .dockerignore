@@ -1,0 +1,11 @@
+.git
+.cache
+dist
+**/node_modules
+**/.DS_Store
+**/__pycache__
+**/*.sdr
+server/web/dist
+server/web/public/assets/badges
+server/data
+server/kindlevel-server

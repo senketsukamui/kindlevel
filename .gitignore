@@ -4,3 +4,8 @@ __pycache__/
 *.pyc
 *.sdr/
 .cache/
+node_modules/
+server/web/dist/
+server/web/public/assets/badges/
+server/data/
+server/kindlevel-server
