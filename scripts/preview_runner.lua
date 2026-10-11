@@ -69,7 +69,9 @@ local function capture()
         demo = config.demo, rendered = os.time(), achievement_toast = Toasts.active and Toasts.active.achievement.id or false,
         tab = home and home.tab, stats_view = home and home.stats_view, stats_book_id = home and home.stats_book_id,
         stats_list_page = home and home.stats_list_page, recovery_mode = home and (home.stats_recovery_mode or "reading"),
-        break_days = home and home:journeyThreshold() })
+        break_days = home and home:journeyThreshold(), achievement_page = home and (home.achievement_page or 1),
+        achievement_filter = home and (home.achievement_filter or "all"),
+        achievement_preview = Toasts.active and Toasts.active.preview or false })
     f:close()
     assert(os.rename(ipc .. "/state.next.json", ipc .. "/state.json"))
 end
