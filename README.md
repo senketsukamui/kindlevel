@@ -45,6 +45,7 @@ The first launch shows three original sample books: two EPUBs and one plain-text
 - Turn pages using KOReader's usual gestures and controls.
 - To return, open KOReader's main menu and choose **Kindlevel**. This saves and closes the book, then restores the custom home.
 - The selected book's saved completion percentage appears beneath its cover. Tap **Continue reading** to resume.
+- The header shows **Today** (reading time, streak, and daily-goal progress) and **yearly books** (confirmed finishes toward your target). Tap Today for its session journal, or tap the yearly count for goal details. Goals set to 0 show totals without a progress line.
 - **Statistics** shows period totals and a daily chart. Select **Year** for the activity calendar; tap a day to view its sessions, then tap a session to view that book.
 - Tap the book-history count beneath the overview metrics to browse all books in your statistics history.
 - **Return statistics →** beneath the dashboard shows returns after breaks, both across all reading and for individual books. Choose a break length of 3, 7, or 14 days; tap a return to open its day journal or book journey.

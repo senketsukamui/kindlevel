@@ -9,6 +9,7 @@ local TextBoxWidget = require("ui/widget/textboxwidget")
 local TextWidget = require("ui/widget/textwidget")
 local UIManager = require("ui/uimanager")
 local logger = require("logger")
+local Stats = require("kindlevel_stats")
 local Screen = Device.screen
 
 local Home = InputContainer:extend{
@@ -144,46 +145,69 @@ function Home:header()
     self:text("×", w - self:px(66), self:px(10), self:px(48), self:px(42), 29,
         { center = true, single = true })
     self:hit(w - self:px(75), 0, self:px(75), self:px(55), function() self:onClose() end, "close")
-    local y, h = self:px(63), self:px(53)
-    self:rect(p, y, w - 2 * p, h, 242)
-    local cell = math.floor((w - 2 * p) / 3)
-    local labels = {
-        { tostring(#self.library.books) .. " books", "On device" },
-        { self.tab == "library" and "Library" or self.tab == "settings" and "Settings"
-            or self.tab == "achievements" and "Achievements" or "Reading", "Your own pace" },
-        { os.date("%d %b"), "Local library" },
-    }
-    if self.tab == "stats" then
-        local stats = self.owner:getStats():load()
-        local today = stats.days[os.date("%Y-%m-%d", stats.now)] or {}
-        local goal = self.owner.settings:readSetting("daily_minutes")
-        if goal == nil then goal = 20 end
-        labels = {
-            { tostring(stats:streak()) .. " days", "Reading streak" },
-            { "Statistics", "Your own pace" },
-            { goal > 0 and string.format("%d / %d min", math.floor((today.seconds or 0) / 60), goal)
-                or require("kindlevel_stats").duration(today.seconds), goal > 0 and "Daily goal" or "Today" },
-        }
-        if self.owner.getGoals then
-            local year = self.stats_view == "goal" and (self.stats_goal_year or self.stats_year)
-                or self.stats_view == "month" and tonumber(os.date("%Y", self.stats_month))
-                or self.stats_period == "year" and self.stats_year
-                or tonumber(os.date("%Y", stats.now))
-            local goals = self.owner:getGoals()
-            local target, completed = goals:target(year), #goals:list(year)
-            labels[3] = { target > 0 and string.format("%d / %d books", completed, target)
-                or tostring(completed) .. " books", "Year goal · " .. tostring(year) }
-            self:hit(p + 2 * cell, y, cell, h, function()
-                self.stats_goal_year = year; self:statsNavigate("goal"); self.stats_list_page = 1; self:rebuild()
-            end, "year-goal")
-        end
+    self:readingSummary()
+end
+
+function Home:summaryTrack(x, width, ratio)
+    self:rect(x, self:px(120), width, self:px(2), 226)
+    self:rect(x, self:px(120), math.floor(width * math.max(0, math.min(1, ratio))), self:px(2), 35)
+end
+
+function Home:summaryNavigate(view)
+    if self.tab ~= "stats" then
+        self.stats_view, self.stats_history, self.stats_list_page = "overview", {}, 1
     end
-    for i, label in ipairs(labels) do
-        local x = p + (i - 1) * cell
-        self:text(label[1], x, y + self:px(8), cell, self:px(23), 15, { center = true, single = true })
-        self:text(label[2], x, y + self:px(32), cell, self:px(17), 10,
-            { center = true, single = true, gray = 100 })
-        if i < 3 then self:rect(x + cell, y + self:px(11), math.max(1, self:px(1)), h - self:px(22), 212) end
+    self.tab = "stats"
+    self:statsNavigate(view)
+end
+
+function Home:readingSummary()
+    local p, width = self:px(28), self.width - self:px(56)
+    local stats = self.owner:getStats():load()
+    local today_key = os.date("%Y-%m-%d", stats.now)
+    local seconds = (stats.days[today_key] or {}).seconds or 0
+    local goal = self.owner.settings:readSetting("daily_minutes", 20)
+    local left_width = math.floor(width * 2 / 3) - self:px(32)
+    local right = p + math.floor(width * 2 / 3)
+    local right_width = p + width - right
+    local detail = p + math.floor(left_width * 0.47)
+    local detail_width = left_width - (detail - p)
+    self:text("TODAY", p, self:px(65), left_width, self:px(18), 10, { single = true, gray = 85 })
+    local streak = stats:streak()
+    if streak > 0 then
+        self:text(string.format("Streak · %d %s", streak, streak == 1 and "day" or "days"), detail,
+            self:px(65), detail_width, self:px(18), 10, { single = true, gray = 85 })
+    end
+    self:text(stats.error and "—" or Stats.duration(seconds), p, self:px(84), detail - p - self:px(8), self:px(31), 25,
+        { single = true, serif = true })
+    local caption = stats.error == "missing" and "No reading history"
+        or stats.error and "History unavailable"
+        or goal > 0 and string.format(seconds >= goal * 60 and "Goal reached · %d min" or "%d min goal", goal)
+        or "Reading time today"
+    self:text(caption, detail, self:px(95), detail_width, self:px(20), 10, { single = true, gray = 85 })
+    if goal > 0 and not stats.error then self:summaryTrack(p, left_width, seconds / (goal * 60)) end
+    self:hit(p, self:px(60), left_width, self:px(65), function()
+        self:summaryNavigate("day"); self.stats_date, self.stats_list_page = today_key, 1; self:rebuild()
+    end, "today-reading")
+
+    local year = tonumber(os.date("%Y", stats.now))
+    if self.tab == "stats" then
+        year = self.stats_view == "goal" and (self.stats_goal_year or self.stats_year)
+            or self.stats_view == "month" and tonumber(os.date("%Y", self.stats_month))
+            or self.stats_period == "year" and self.stats_year or year
+    end
+    self:text(tostring(year) .. " · BOOKS", right, self:px(65), right_width, self:px(18), 10, { single = true, gray = 85 })
+    if self.owner.getGoals then
+        local goals = self.owner:getGoals()
+        local target, completed = goals:target(year), #goals:list(year)
+        self:text(target > 0 and string.format("%d / %d", completed, target) or tostring(completed), right,
+            self:px(84), right_width, self:px(31), 25, { single = true, serif = true })
+        if target > 0 then self:summaryTrack(right, right_width, completed / target) end
+        self:hit(right, self:px(60), right_width, self:px(65), function()
+            self:summaryNavigate("goal"); self.stats_goal_year, self.stats_list_page = year, 1; self:rebuild()
+        end, "year-goal")
+    else
+        self:text("—", right, self:px(84), right_width, self:px(31), 25, { single = true, serif = true })
     end
 end
 
