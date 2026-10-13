@@ -9,3 +9,7 @@ server/web/dist
 server/web/public/assets/badges
 server/data
 server/kindlevel-server
+.env
+.env.*
+data
+backups

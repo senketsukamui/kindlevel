@@ -1,82 +1,77 @@
 # Kindlevel
 
-A reading home for KOReader, built for jailbroken Kindles. Browse your library, follow your reading habits, and unlock achievements as you read.
+A reading home for KOReader: browse your library, follow your reading habits, and collect achievements. Add an optional self-hosted dashboard to see your reading history in a browser.
 
-Works offline. No account or server required. KOReader handles document rendering, saved positions and reading activity.
+The plugin works offline. KOReader handles document rendering, saved positions and reading activity.
 
-[Download v0.5.0](https://github.com/senketsukamui/kindlevel/releases/download/v0.5.0/kindlevel-0.5.0.zip) · [Current source](https://github.com/senketsukamui/kindlevel/archive/refs/heads/main.zip)
+[Stable plugin release](https://github.com/senketsukamui/kindlevel/releases/latest) · [VPS setup](docs/VPS.md) · [Development](docs/DEVELOPMENT.md)
 
 ## Features
 
-- **Reading home:** cover carousel, local library, reading progress and resume.
-- **Statistics:** reading time, pages, streaks, daily journals and book details using your existing KOReader history.
-- **Calendars:** yearly heatmaps and monthly book timelines with reading activity bars.
-- **Goals:** daily reading targets and yearly goals based on confirmed finished books.
-- **Book journeys:** reading periods, breaks and returns to individual books or reading in general.
-- **Achievements:** 42 badges covering milestones, habits and book quests, with corner notifications and support for custom definitions.
-- **Multiple formats:** EPUB, PDF, MOBI, FB2, TXT and other documents supported by your KOReader installation.
+- Cover carousel, local library and one-tap resume.
+- Reading time, pages, streaks, daily journals and book details.
+- Yearly heatmaps, monthly book timelines and reading goals.
+- Book journeys, breaks and returns.
+- 42 achievements with corner notifications and custom definitions.
+- EPUB, PDF, MOBI, FB2, TXT and other formats supported by KOReader.
+- Optional Go/Svelte dashboard with device pairing and manual statistics sync.
 
-**Early development:** v0.5.0 includes all the features listed above and Wi-Fi updates. XP is reserved for future progression.
+**Release status:** v0.5.0 includes the offline plugin and Wi-Fi updates. Dashboard sync and public HTTP support are in the development version, `0.6.0-dev.1`, on [`feature/web-dashboard-sync`](https://github.com/senketsukamui/kindlevel/tree/feature/web-dashboard-sync). XP is reserved for future progression.
 
-## Install
+## Install on Kindle
 
-Requires a jailbroken Kindle with KOReader installed. Keep KOReader’s **Reading statistics** plugin enabled to collect reading history.
+Requires a jailbroken Kindle with KOReader. Keep its **Reading statistics** plugin enabled. Other KOReader platforms have not been verified.
 
-1. Download the release ZIP, or the current source ZIP for development features, and extract it.
-2. Exit KOReader and connect your Kindle over USB.
-3. Copy the entire `kindlevel.koplugin` folder into `koreader/plugins/` on the Kindle. `main.lua` must be directly inside `koreader/plugins/kindlevel.koplugin/`.
-4. Eject the Kindle, start KOReader, and open **Tools → Kindlevel**. Enable the plugin in KOReader’s plugin manager if needed.
+1. Download the plugin release ZIP, or build the development source with `python3 scripts/build.py`.
+2. **Fully exit KOReader**, then connect the Kindle over USB.
+3. Copy the contents of `kindlevel.koplugin` into `koreader/plugins/kindlevel.koplugin/`, replacing shipped files while keeping personal files. Avoid nesting another plugin folder inside it.
+4. Start KOReader and open **Tools → Kindlevel**. Check the version in Kindlevel's Settings footer.
 
-Three original sample books are included. To use your own library, open **Settings → Choose books folder**, long-press the folder name and confirm **Choose**.
+Three original sample books are included. Select your library through **Settings → Choose books folder**. For automatic opening, enable **Show home on file browser entry** and set KOReader's **Start with** option to **file browser**.
 
-To open Kindlevel automatically, enable **Show home on file browser entry** in its settings and set KOReader’s **Start with** option to **file browser**.
+Kindlevel reads native statistics through read-only connections. Its goals and unlocks are stored separately; reading positions stay in KOReader's document settings.
 
-Kindlevel reads the existing statistics database through read-only connections and stores its goals and achievement unlocks separately. Reading positions stay in KOReader’s document settings.
+## Self-host the dashboard
 
-## Wi-Fi updates
-
-Install v0.5.0 over USB once if you use v0.4.0 or earlier. After that, use **Settings → Check for updates** or **Tools → Kindlevel updates** to install newer stable GitHub releases over Wi-Fi. Downloads are verified, custom achievements and icons are preserved, and KOReader restarts after installation. [Update guide](docs/UPDATES.md).
-
-## Development
-
-### Web dashboard preview
-
-A Go/Svelte dashboard with owner login and Kindle statistics sync is available as one Docker container:
+On a VPS with Docker, Compose and Python 3, from the development checkout:
 
 ```sh
-docker compose up --build -d
+sudo ./scripts/setup-server.sh http://YOUR_VPS_IP
 ```
 
-Open **http://localhost:8080** and create your account using the setup code from `docker compose exec kindlevel cat /data/setup-code`. Pair a Kindle from **Your Kindle** to replace demo data with your books, statistics and achievements. Server sync requires the current development plugin; v0.5.0 does not include it. [Setup, LAN testing and HTTPS deployment](docs/DASHBOARD.md).
+Open the displayed address, create your account using the printed setup code, and select **Your Kindle → Pair a Kindle**. Install `0.6.0-dev.1` or newer on the Kindle, then connect through **Settings → Web dashboard**.
 
-### Kindle plugin preview
+The server runs in one container with SQLite. HTTP does not encrypt login or sync traffic. [Fresh-server setup, backups and troubleshooting](docs/VPS.md).
 
-Preview the actual KOReader interface on your computer with Python 3.12+ and Docker:
+Sync currently uploads book metadata, statistics and achievements. Book files, covers and highlights are planned. [Connection details](docs/DASHBOARD.md).
+
+## Updates and development
+
+From v0.5.0, **Settings → Check for updates** installs newer stable GitHub releases over Wi-Fi. Older versions need one USB upgrade. [Update guide](docs/UPDATES.md).
+
+Preview the actual plugin with Python 3.12+ and Docker:
 
 ```sh
 python3 scripts/preview.py
 ```
 
-Open **http://127.0.0.1:8765**. The preview uses demo history; click to tap, drag to swipe and use **Reload Lua** after edits.
+Open **http://127.0.0.1:8765**. For a local dashboard preview, run `docker compose up --build -d` and open **http://localhost:8080**.
 
-Build a local install ZIP from your working tree with `python3 scripts/build.py`.
-
-The interface and reader flow have been tested in the official KOReader v2026.07.1 Linux ARM64 runtime at the Paperwhite 10th generation’s resolution. Physical Kindle testing is pending.
-
-[Development and testing guide](docs/DEVELOPMENT.md) · [Custom achievements and trigger reference](docs/ACHIEVEMENTS.md)
+Native reader flows are tested in KOReader's Linux ARM64 runtime; the dashboard is checked on desktop and mobile browsers. Physical device behavior still needs testing.
 
 ## Roadmap
 
-- [ ] Kindle testing and tuning for touch, sleep and screen refresh.
-- [ ] XP, levels and character outfits that evolve with reading progress.
-- [ ] Reading suggestions based on available time: “I have 15 minutes.”
-- [ ] A web app for books, statistics and highlights, self-hosted on your own server.
-- [ ] Book and highlight synchronization between the Kindle and web app, with offline support.
+- [ ] Device testing and touch/e-ink tuning.
+- [ ] Book files, covers and highlights synced with the self-hosted web app.
 - [ ] Highlight review.
+- [ ] XP, levels and character outfits.
+- [ ] Reading suggestions based on available time.
 
 ## Contributing
 
-Bug reports, ideas and pull requests are welcome. For bugs, include your Kindle model, KOReader version, steps to reproduce and relevant `crash.log` output.
+Include your device, KOReader version, reproduction steps and relevant `crash.log` output in bug reports. Do not include device tokens, setup codes or personal databases.
+
+[Custom achievements](docs/ACHIEVEMENTS.md) · [Developer guide](docs/DEVELOPMENT.md)
 
 ## License
 

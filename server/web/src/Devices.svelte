@@ -58,7 +58,7 @@
     </ol>
     <p class="detail-footnote">
       Your Kindle needs a server address it can reach. “localhost” on Kindle points to the Kindle
-      itself. Use your server’s HTTPS domain, or a trusted LAN address for local testing.
+      itself. Use the server address shown above; for HTTP, confirm Allow HTTP on the device.
     </p>
   </div>
   <div class="pair-code-box">

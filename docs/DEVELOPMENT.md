@@ -2,7 +2,19 @@
 
 Run commands from the repository root unless noted otherwise.
 
-Kindlevel v0.5.0 includes [Wi-Fi updates](UPDATES.md). The current development version, `0.6.0-dev`, adds [dashboard pairing and statistics sync](DASHBOARD.md). The installed version and release filenames come from `kindlevel.koplugin/kindlevel_version.lua`.
+Kindlevel v0.5.0 includes [Wi-Fi updates](UPDATES.md). The current development version, `0.6.0-dev.1`, adds [dashboard pairing and statistics sync](DASHBOARD.md), including public HTTP after explicit approval. The installed version and release filenames come from `kindlevel.koplugin/kindlevel_version.lua`.
+
+## Dashboard development
+
+Server source is in `server/`, with the Svelte app in `server/web/`. Docker is enough to build and preview both:
+
+```sh
+docker compose up --build -d
+```
+
+Open **http://localhost:8080**. Without `.env`, this uses a named Docker volume and a localhost binding. The [VPS guide](VPS.md) uses the same Compose file with a project-local data folder.
+
+For hot reload, see [dashboard development](DASHBOARD.md#develop-and-verify). Native Go, calendar, browser and KOReader sync tests are kept in `server/internal/dashboard/`, `server/web/` and `tests/`.
 
 ## Preview and debug on a Mac
 

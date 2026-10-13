@@ -7,12 +7,12 @@ services:
       dockerfile: server/Dockerfile
     image: kindlevel-dashboard:local
     ports:
-      - "${KINDLEVEL_BIND_ADDRESS:-127.0.0.1}:8080:8080"
+      - "${KINDLEVEL_BIND_ADDRESS:-127.0.0.1}:${KINDLEVEL_PORT:-8080}:8080"
     environment:
       TZ: "${TZ:-UTC}"
       KINDLEVEL_PUBLIC_URL: "${KINDLEVEL_PUBLIC_URL:-}"
     volumes:
-      - kindlevel-data:/data
+      - "${KINDLEVEL_DATA_PATH:-kindlevel-data}:/data"
     read_only: true
     tmpfs:
       - /tmp
@@ -21,6 +21,11 @@ services:
     security_opt:
       - no-new-privileges:true
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   kindlevel-data:

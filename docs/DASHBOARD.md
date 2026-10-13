@@ -17,7 +17,7 @@ The `kindlevel-data` volume holds the account, device registrations, goals and r
 
 ## Pair your Kindle
 
-1. Install a plugin build containing server sync. The current development version is **0.6.0-dev**; v0.5.0 does not contain it. Build with `python3 scripts/build.py`, copy `kindlevel.koplugin` from the ZIP into `koreader/plugins/` over USB, and restart KOReader.
+1. Install a plugin build containing server sync. The current development version is **0.6.0-dev.1**, which supports public HTTP after approval; v0.5.0 does not contain sync. Build with `python3 scripts/build.py`, fully exit KOReader, then copy the contents of the ZIP's `kindlevel.koplugin` folder into the existing `koreader/plugins/kindlevel.koplugin/` over USB, replacing shipped files. Keep personal files. Start KOReader again and confirm the new version in Kindlevel's Settings footer.
 2. In the web dashboard, open **Your Kindle → Pair a Kindle**. The code expires after ten minutes and can be used once.
 3. On Kindle, open **Kindlevel → Settings → Web dashboard → Connect to server**, or **Tools → Kindlevel web dashboard**.
 4. Enter the reachable server address, pairing code and Kindle name.
@@ -35,21 +35,13 @@ KINDLEVEL_BIND_ADDRESS=0.0.0.0 docker compose up --build -d
 
 Find your Mac's Wi-Fi address in macOS Network settings. If it is `192.168.1.50`, enter **http://192.168.1.50:8080** on Kindle. Allow macOS firewall access if prompted. “localhost” on Kindle refers to the Kindle itself.
 
-The plugin asks you to explicitly approve unencrypted HTTP. It is allowed only for private IPv4 addresses, localhost and `.local` names. Use this for trusted LAN testing; use HTTPS for an internet-facing server.
+The plugin asks you to explicitly approve unencrypted HTTP and saves that choice for the paired server. Public IP addresses and hostnames are supported too. HTTP does not encrypt login or sync traffic. [Simple VPS setup](VPS.md).
 
-### Deploy with HTTPS
+### Host on a VPS
 
-With an existing reverse proxy, forward your domain to the application on port 8080 and set `KINDLEVEL_PUBLIC_URL=https://books.example.com`. This enables secure browser cookies and pre-fills the pairing address.
+Follow the [VPS setup guide](VPS.md) for a fresh-server installation with one container and a persistent data folder. The setup helper prints the address and first-run account code.
 
-Alternatively, point a domain to your server, make ports 80 and 443 reachable, and run the provided Caddy configuration:
-
-```sh
-KINDLEVEL_DOMAIN=books.example.com docker compose -f compose.yaml -f compose.https.yaml up --build -d
-```
-
-Caddy manages the domain's HTTPS certificate and renewal. Open the HTTPS dashboard and pair the Kindle with the same address. The application remains one container; this optional configuration adds a TLS proxy.
-
-Kindle HTTPS verifies the certificate chain and hostname using the bundled Mozilla trust data. It does not bypass verification for self-signed certificates. Sync requests do not follow redirects; enter the final address. Server subpaths and HTTP proxies are not supported in this version.
+For an existing HTTPS reverse proxy, set `KINDLEVEL_PUBLIC_URL` to the final HTTPS domain. The plugin verifies certificate chains and hostnames; self-signed certificates, HTTP proxies and server subpaths are not supported. Sync requests do not follow redirects.
 
 ## What syncs
 
@@ -88,7 +80,7 @@ Native data is stored in `server/data/`; the setup code is `server/data/setup-co
 | `KINDLEVEL_ADDR` | `:8080` | `:8080` |
 | `KINDLEVEL_DATA_DIR` | `data` | `/data` |
 | `KINDLEVEL_WEB_DIR` | `web/dist` | `/app/web` |
-| `KINDLEVEL_PUBLIC_URL` | Empty | Empty |
+| `KINDLEVEL_PUBLIC_URL` | Empty | Empty (set by the VPS helper) |
 | `TZ` | Host timezone | `UTC` |
 
 `KINDLEVEL_BIND_ADDRESS` controls Compose's host binding, defaulting to `127.0.0.1`. The container runs as a non-root user with a read-only root filesystem and a writable data volume. `/healthz` checks database availability. Real calendar dates use the Kindle's reported timezone offset; demo dates use the server timezone.
