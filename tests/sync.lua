@@ -34,7 +34,21 @@ assert(not encoded:find("/workspace",1,true) and not encoded:find("/tmp/",1,true
 local stable=stats:query(function(conn) return conn:rowexec("SELECT count(*) FROM page_stat_data") end)
 assert(Net.address("https://books.example.com:8443/",false)=="https://books.example.com:8443")
 assert(Net.address("http://192.168.1.3:8080",true))
-for _,address in ipairs{"http://example.com","https://user:password@example.com","https://example.com/path","https://example.com?token=bad","http://256.1.1.1"} do assert(not Net.address(address,true),"unsafe server address rejected") end
+assert(Net.address("http://203.0.113.10",true),"public HTTP supported after explicit approval")
+assert(not Net.address("http://203.0.113.10",false),"public HTTP requires approval")
+for _,address in ipairs{"https://user:password@example.com","https://example.com/path","https://example.com?token=bad","http://256.1.1.1"} do assert(not Net.address(address,true),"unsafe server address rejected") end
+local http=require("socket.http")
+local realRequest=http.request
+for _,case in ipairs{{"timeout","Connection timed out."},{"connection refused","Connection refused."},{"network is unreachable","No network route"},{"host not found","could not be resolved"}} do
+    http.request=function() return nil,case[1] end
+    local result,message=Net:new{allow_http=true}:request("http://192.168.1.50:8080","/api/v1/sync","{}","private-test-token")
+    assert(not result and message:find(case[2],1,true) and message:find("http://192.168.1.50:8080",1,true),"diagnostic includes the address and transport cause")
+    assert(not message:find("private-test-token",1,true),"credentials are not included in connection errors")
+end
+http.request=function() error("TLS certificate verification failed") end
+local _,message=Net:new{allow_http=true}:request("http://192.168.1.50:8080","/api/v1/sync","{}")
+assert(message:find("HTTPS verification or handshake failed",1,true),"network exceptions are classified")
+http.request=realRequest
 local folder="/tmp/kindlevel-sync-core";util.makePath(folder)
 local failed=true;local firstBody;local accepted=0
 local transport={request=function(_,server,path,body,secret)

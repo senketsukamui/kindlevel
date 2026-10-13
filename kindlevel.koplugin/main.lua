@@ -209,7 +209,7 @@ function Kindlevel:pairDashboard()
             end)
         end
         if server:sub(1,7)=="http://" then
-            UIManager:show(require("ui/widget/confirmbox"):new{text="Use unencrypted HTTP on your trusted local network? The pairing code, device token and reading history will be sent without encryption. Use HTTPS for a public server.",ok_text="Allow local HTTP",ok_callback=function() connect(true) end})
+            UIManager:show(require("ui/widget/confirmbox"):new{text="Use unencrypted HTTP for this server? The pairing code, device token and reading history will be sent without encryption.",ok_text="Allow HTTP",ok_callback=function() connect(true) end})
         else connect(false) end
     end}}}}
     UIManager:show(dialog);dialog:onShowKeyboard()

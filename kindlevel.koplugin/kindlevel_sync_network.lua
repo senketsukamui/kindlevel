@@ -2,16 +2,16 @@
 local Network={}
 Network.__index=Network
 
-local function localHost(host)
+local function validIPv4(host)
     host=host:lower()
     local a,b,c,d=host:match("^(%d+)%.(%d+)%.(%d+)%.(%d+)$")
     if a then
         a,b,c,d=tonumber(a),tonumber(b),tonumber(c),tonumber(d)
         if a>255 or b>255 or c>255 or d>255 then return false end
         if table.concat({a,b,c,d},".")~=host then return false end
-        return a==10 or a==127 or a==192 and b==168 or a==172 and b>=16 and b<=31
+        return true
     end
-    return host=="localhost" or host:sub(-6)==".local"
+    return false
 end
 
 function Network.address(value,allow_http)
@@ -21,15 +21,44 @@ function Network.address(value,allow_http)
     if not url or not url.host or url.user or url.password or url.query or url.fragment or url.path and url.path~="" then
         return nil,"Use the server's address without a path, username or password."
     end
+    if url.host:match("^[%d.]+$") and not validIPv4(url.host) then return nil,"The server IP address is invalid." end
     if url.port and (not tostring(url.port):match("^%d+$") or tonumber(url.port)<1 or tonumber(url.port)>65535) then return nil,"The server port is invalid." end
-    if url.scheme~="https" and not (url.scheme=="http" and allow_http and localHost(url.host)) then
-        return nil,"Use HTTPS, or explicitly allow HTTP with a trusted local network address."
+    if url.scheme~="https" and not (url.scheme=="http" and allow_http) then
+        return nil,"Use HTTPS, or approve unencrypted HTTP for this server."
     end
     return value
 end
 
 function Network:new(options)
     return setmetatable({cafile=options.cafile,allow_http=options.allow_http==true},self)
+end
+
+function Network.connectionError(address,reason,raised)
+    -- Classify transport errors without echoing request bodies or credentials.
+    local message=type(reason)=="string" and reason:lower() or ""
+    local detail="The connection failed before the server returned a response."
+    local hint="Check Wi-Fi, the server address, and that both devices can reach each other."
+    if message:find("timeout",1,true) or message:find("timed out",1,true) then
+        detail="Connection timed out."
+        hint="Check the server is reachable from another device on the same Wi-Fi. Guest networks may block connections between devices."
+    elseif message:find("refused",1,true) then
+        detail="Connection refused."
+        hint="Check the server is running and the port is correct."
+    elseif message:find("unreachable",1,true) or message:find("no route",1,true) then
+        detail="No network route to the server."
+    elseif message:find("host not found",1,true) or message:find("name or service",1,true) or message:find("resolve",1,true) or message:find("name resolution",1,true) then
+        detail="The server name could not be resolved."
+        hint="Check the hostname or use the server's private IP address for local testing."
+    elseif message:find("certificate",1,true) or message:find("ssl",1,true) or message:find("tls",1,true) or message:find("wrong version",1,true) or message:find("wantread",1,true) then
+        detail="HTTPS verification or handshake failed."
+        hint="Use HTTPS only if this server provides it. A local HTTP server needs http://. For HTTPS, check the certificate and Kindle date and time."
+    elseif message:find("closed",1,true) or message:find("eof",1,true) then
+        detail="The server closed the connection before returning a response."
+        hint="Check whether the address should start with http:// or https://."
+    elseif raised then
+        detail="KOReader's networking library could not complete the request."
+    end
+    return "Cannot reach the server.\n\nServer: " .. address .. "\n" .. detail .. "\n\n" .. hint
 end
 
 function Network:request(server,path,body,token)
@@ -69,7 +98,7 @@ function Network:request(server,path,body,token)
     socketutil:set_timeout(10,90)
     local ok,success,code=pcall(http.request,{url=address .. path,method="POST",create=create,redirect=false,headers=headers,source=ltn12.source.string(body),sink=sink})
     socketutil:reset_timeout()
-    if not ok or not success then return nil,"Cannot reach the server. Check Wi-Fi, the address, and the Kindle's date and time." end
+    if not ok or not success then return nil,Network.connectionError(address,ok and code or success,not ok) end
     if tonumber(code)>=300 and tonumber(code)<400 then return nil,"The server redirected the request. Enter its final HTTPS address and try again." end
     local parsed_ok,result=pcall(require("json").decode,table.concat(chunks))
     if tonumber(code)~=200 then
