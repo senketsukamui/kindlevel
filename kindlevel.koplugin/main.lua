@@ -63,6 +63,10 @@ function Kindlevel:addToMainMenu(items)
         text = "Kindlevel updates", sorting_hint = "more_tools",
         callback = function() self:checkForUpdates() end,
     }
+    items.kindlevel_web = {
+        text = "Kindlevel web dashboard", sorting_hint = "more_tools",
+        callback = function() self:dashboardConnection() end,
+    }
 end
 
 function Kindlevel:getUpdater()
@@ -72,14 +76,23 @@ function Kindlevel:getUpdater()
     return self.updater
 end
 
-local function updateNetworkJob(task,message,callback)
+local function networkJob(task,message,callback,before)
     local updater=require("kindlevel_updater")
-    if updater.busy then UIManager:show(InfoMessage:new{text="An update operation is already running."});return end
+    if updater.busy then UIManager:show(InfoMessage:new{text="Another network operation is running."});return end
     require("ui/network/manager"):runWhenOnline(function()
         if updater.busy then return end
         updater.busy=true
         local reader=require("apps/reader/readerui").instance
         if reader then reader:handleEvent(require("ui/event"):new("ReadingPaused")) end
+        if before then
+            local prepared=pcall(before)
+            if not prepared then
+                if reader then reader:handleEvent(require("ui/event"):new("ReadingResumed")) end
+                updater.busy=false;require("ui/network/manager"):afterWifiAction()
+                callback(nil,"Cannot prepare reading history. Close the book and try again.")
+                return
+            end
+        end
         require("ui/trapper"):wrap(function()
             local ok,completed,result,err=pcall(function()
                 return require("ui/trapper"):dismissableRunInSubprocess(task,message)
@@ -89,7 +102,7 @@ local function updateNetworkJob(task,message,callback)
             end
             updater.busy=false
             require("ui/network/manager"):afterWifiAction()
-            if not ok then callback(nil,"The update operation failed. Try again.")
+            if not ok then callback(nil,"The network operation failed. Try again.")
             elseif completed then callback(result,err)
             else callback(nil,nil,true) end
         end)
@@ -98,7 +111,7 @@ end
 
 function Kindlevel:checkForUpdates()
     local core=self:getUpdater()
-    updateNetworkJob(function() return core:check() end,"Checking for Kindlevel updates…",function(release,err,cancelled)
+    networkJob(function() return core:check() end,"Checking for Kindlevel updates…",function(release,err,cancelled)
         if cancelled then return end
         if not release then UIManager:show(InfoMessage:new{text=err or "Cannot check for updates."});return end
         if not release.newer then
@@ -115,7 +128,7 @@ end
 
 function Kindlevel:installUpdate(release)
     local core=self:getUpdater()
-    updateNetworkJob(function() return core:prepare(release) end,"Downloading and checking Kindlevel…",function(prepared,err,cancelled)
+    networkJob(function() return core:prepare(release) end,"Downloading and checking Kindlevel…",function(prepared,err,cancelled)
         if not prepared then
             core:cleanup()
             if not cancelled then UIManager:show(InfoMessage:new{text=err or "Cannot prepare the update."}) end
@@ -141,6 +154,80 @@ function Kindlevel:installUpdate(release)
             return
         end
         UIManager:restartKOReader()
+    end)
+end
+
+function Kindlevel:getSync()
+    if not self.sync then self.sync=require("kindlevel_sync"):new{
+        state_path=DataStorage:getSettingsDir() .. "/kindlevel-sync.json",
+        pending_path=DataStorage:getDataDir() .. "/kindlevel-sync/pending.json",
+        cafile=self.plugin_dir .. "/assets/cacert.pem",
+    } end
+    return self.sync
+end
+
+function Kindlevel:dashboardConnection()
+    local core=self:getSync()
+    local ok,state=pcall(core.state,core)
+    if not ok then UIManager:show(InfoMessage:new{text="Cannot read the server connection. Restore kindlevel-sync.json or remove it and pair again."});return end
+    local dialog
+    local title="Your web dashboard"
+    if state.server then title=title .. "\n" .. state.server .. "\n" .. (state.last_sync and "Last synced: " .. os.date("%Y-%m-%d %H:%M",state.last_sync) or "Ready for the first sync") end
+    dialog=ButtonDialog:new{title=title,buttons={
+        {{text=state.token and "Pair another server" or "Connect to server",callback=function() UIManager:close(dialog);self:pairDashboard() end}},
+        {{text="Sync now",enabled=state.token~=nil,callback=function() UIManager:close(dialog);self:syncDashboard() end}},
+        {{text="Forget connection",enabled=state.token~=nil,callback=function()
+            UIManager:close(dialog)
+            UIManager:show(require("ui/widget/confirmbox"):new{text="Forget this server connection on the Kindle? Reading history stays on both devices. Revoke the Kindle in the web dashboard to disable its old token.",ok_text="Forget",ok_callback=function() core:forget() end})
+        end}},
+        {{text="Close",callback=function() UIManager:close(dialog) end}},
+    }}
+    UIManager:show(dialog)
+end
+
+function Kindlevel:pairDashboard()
+    local core=self:getSync()
+    local state=core:state()
+    local dialog
+    dialog=require("ui/widget/multiinputdialog"):new{title="Connect your web dashboard",fields={
+        {description="Server address",text=state.server or "https://",hint="https://books.example.com"},
+        {description="Pairing code from the dashboard",text="",hint="ABCDE-FG234"},
+        {description="Kindle name",text=state.name or "My Kindle"},
+    },buttons={{{text="Cancel",callback=function() UIManager:close(dialog) end},{text="Pair",callback=function()
+        local values=dialog:getFields()
+        local server=values[1]:gsub("^%s+",""):gsub("%s+$","")
+        local code=values[2]:gsub("^%s+",""):gsub("%s+$","")
+        local name=values[3]:gsub("^%s+",""):gsub("%s+$","")
+        if code=="" or name=="" or #name>80 then UIManager:show(InfoMessage:new{text="Enter the pairing code and a Kindle name (up to 80 bytes)."});return end
+        local function connect(allow_http)
+            local address,err=require("kindlevel_sync_network").address(server,allow_http)
+            if not address then UIManager:show(InfoMessage:new{text=err});return end
+            UIManager:close(dialog)
+            networkJob(function() return core:pair(address,code,name,allow_http) end,"Connecting your Kindle…",function(result,message,cancelled)
+                if cancelled then return end
+                UIManager:show(InfoMessage:new{text=result and "Kindle connected. Open Web dashboard and choose Sync now to upload your reading history." or message or "Cannot connect to the server."})
+            end)
+        end
+        if server:sub(1,7)=="http://" then
+            UIManager:show(require("ui/widget/confirmbox"):new{text="Use unencrypted HTTP for this server? The pairing code, device token and reading history will be sent without encryption.",ok_text="Allow HTTP",ok_callback=function() connect(true) end})
+        else connect(false) end
+    end}}}}
+    UIManager:show(dialog);dialog:onShowKeyboard()
+end
+
+function Kindlevel:syncDashboard()
+    local core=self:getSync()
+    if not core:state().token then self:pairDashboard();return end
+    networkJob(function() return core:upload(self) end,"Syncing your reading history…",function(result,err,cancelled)
+        if cancelled then return end
+        if result then UIManager:show(InfoMessage:new{text=string.format("Reading history synced.\n\n%d books · %d book-days · %d achievements\nOpen or refresh your web dashboard to see it.",result.books or 0,result.activity or 0,result.achievements or 0)})
+        else UIManager:show(InfoMessage:new{text=err or "Could not sync. Your pending snapshot is kept for retry."}) end
+    end,function()
+        local reader=require("apps/reader/readerui").instance
+        if reader then reader:saveSettings() end
+        self:getGoals()
+        self:checkAchievements(false)
+        self.settings:flush()
     end)
 end
 
