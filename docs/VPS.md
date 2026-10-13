@@ -2,7 +2,7 @@
 
 This guide starts from a fresh **Ubuntu 24.04 VPS** and serves the dashboard directly at `http://YOUR_VPS_IP`. It uses one container and keeps the project, configuration and data together. HTTP does not encrypt login or sync traffic.
 
-The dashboard is currently on the `feature/web-dashboard-sync` branch. The v0.5.0 plugin release does not include server sync.
+The dashboard and server sync are included in v0.6.0. These instructions use the release tag for a repeatable installation; ongoing development is on `develop`. The v0.5.0 plugin release does not include server sync.
 
 ## 1. Install the requirements
 
@@ -61,7 +61,7 @@ Use a separate directory for personal projects:
 
 ```sh
 sudo mkdir -p /srv/personal-projects
-sudo git clone --branch feature/web-dashboard-sync https://github.com/senketsukamui/kindlevel.git /srv/personal-projects/kindlevel
+sudo git clone --branch v0.6.0 --depth 1 https://github.com/senketsukamui/kindlevel.git /srv/personal-projects/kindlevel
 cd /srv/personal-projects/kindlevel
 ```
 
@@ -89,7 +89,7 @@ Make TCP port **80** reachable in your provider's firewall. If port 80 is alread
 
 ## 4. Connect your Kindle
 
-1. Install the **development plugin `0.6.0-dev.1` or newer**. From a checkout of this branch, run `python3 scripts/build.py` on your computer or VPS and copy the ZIP's plugin files to the Kindle over USB. Fully exit KOReader before copying, then restart it and verify the version in Settings.
+1. Install **v0.6.0 or newer** using the plugin release ZIP, or run `python3 scripts/build.py` from a source checkout. Copy the ZIP's plugin files to the Kindle over USB. Fully exit KOReader before copying, then restart it and verify the version in Settings.
 2. In the dashboard, open **Your Kindle → Pair a Kindle**.
 3. On Kindle, open **Kindlevel → Settings → Web dashboard → Connect to server**.
 4. Enter `http://YOUR_VPS_IP` (including a custom port if configured), the pairing code and a device name. Choose **Allow HTTP** when prompted.
@@ -115,11 +115,12 @@ To update:
 
 ```sh
 sudo python3 scripts/backup-server.py
-sudo git pull --ff-only
+sudo git fetch origin tag vNEXT
+sudo git checkout vNEXT
 sudo docker compose up --build -d
 ```
 
-Keep `.env` and `data/`; rebuilding the image preserves accounts, device registrations, goals and history. If Git reports local changes, review them before pulling.
+Replace `vNEXT` with the new release tag. Keep `.env` and `data/`; rebuilding the image preserves accounts, device registrations, goals and history. If Git reports local changes, review them before switching releases. Check out `develop` only when you want development builds rather than a tagged release.
 
 ## Configuration
 
@@ -155,7 +156,7 @@ To restore, stop the container, rename the existing `data/` folder so it is kept
 
 - **Address does not open:** check `docker compose ps`, the public IP, configured port and provider firewall. Test `http://YOUR_VPS_IP/healthz`; it should return `{"status":"ok"}`.
 - **Permission denied writing the database:** rerun the setup helper with the same address, or correct the data folder's UID/GID to `10001:10001`.
-- **Kindle asks for a trusted local network:** it is loading older plugin code. Fully exit KOReader, replace files in the existing plugin folder, and verify the footer shows `0.6.0-dev.1` or newer.
+- **Kindle asks for a trusted local network:** it is loading older plugin code. Fully exit KOReader, replace files in the existing plugin folder, and verify the footer shows v0.6.0 or newer.
 - **Connection fails:** use the same address shown in the dashboard, including `http://` and any custom port. “localhost” on Kindle means the Kindle itself.
 - **Pairing code fails:** generate a new code; each code is valid once for ten minutes.
 

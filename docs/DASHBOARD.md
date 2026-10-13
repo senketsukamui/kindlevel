@@ -17,7 +17,7 @@ The `kindlevel-data` volume holds the account, device registrations, goals and r
 
 ## Pair your Kindle
 
-1. Install a plugin build containing server sync. The current development version is **0.6.0-dev.1**, which supports public HTTP after approval; v0.5.0 does not contain sync. Build with `python3 scripts/build.py`, fully exit KOReader, then copy the contents of the ZIP's `kindlevel.koplugin` folder into the existing `koreader/plugins/kindlevel.koplugin/` over USB, replacing shipped files. Keep personal files. Start KOReader again and confirm the new version in Kindlevel's Settings footer.
+1. Install **v0.6.0 or newer**, which includes sync and public HTTP after approval. v0.5.0 does not contain sync. Use the release ZIP or build with `python3 scripts/build.py`, fully exit KOReader, then copy the contents of the ZIP's `kindlevel.koplugin` folder into the existing `koreader/plugins/kindlevel.koplugin/` over USB, replacing shipped files. Keep personal files. Start KOReader again and confirm the new version in Kindlevel's Settings footer.
 2. In the web dashboard, open **Your Kindle → Pair a Kindle**. The code expires after ten minutes and can be used once.
 3. On Kindle, open **Kindlevel → Settings → Web dashboard → Connect to server**, or **Tools → Kindlevel web dashboard**.
 4. Enter the reachable server address, pairing code and Kindle name.

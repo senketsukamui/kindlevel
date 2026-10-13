@@ -16,13 +16,13 @@ The plugin works offline. KOReader handles document rendering, saved positions a
 - EPUB, PDF, MOBI, FB2, TXT and other formats supported by KOReader.
 - Optional Go/Svelte dashboard with device pairing and manual statistics sync.
 
-**Release status:** v0.5.0 includes the offline plugin and Wi-Fi updates. Dashboard sync and public HTTP support are in the development version, `0.6.0-dev.1`, on [`feature/web-dashboard-sync`](https://github.com/senketsukamui/kindlevel/tree/feature/web-dashboard-sync). XP is reserved for future progression.
+**Release status:** v0.6.0 includes the plugin, Wi-Fi updates, dashboard sync and public HTTP support. Ongoing development is on [`develop`](https://github.com/senketsukamui/kindlevel/tree/develop). XP is reserved for future progression.
 
 ## Install on Kindle
 
 Requires a jailbroken Kindle with KOReader. Keep its **Reading statistics** plugin enabled. Other KOReader platforms have not been verified.
 
-1. Download the plugin release ZIP, or build the development source with `python3 scripts/build.py`.
+1. Download the plugin release ZIP, or build a source checkout with `python3 scripts/build.py`.
 2. **Fully exit KOReader**, then connect the Kindle over USB.
 3. Copy the contents of `kindlevel.koplugin` into `koreader/plugins/kindlevel.koplugin/`, replacing shipped files while keeping personal files. Avoid nesting another plugin folder inside it.
 4. Start KOReader and open **Tools → Kindlevel**. Check the version in Kindlevel's Settings footer.
@@ -33,13 +33,13 @@ Kindlevel reads native statistics through read-only connections. Its goals and u
 
 ## Self-host the dashboard
 
-On a VPS with Docker, Compose and Python 3, from the development checkout:
+On a VPS with Docker, Compose and Python 3, from a v0.6.0 source checkout:
 
 ```sh
 sudo ./scripts/setup-server.sh http://YOUR_VPS_IP
 ```
 
-Open the displayed address, create your account using the printed setup code, and select **Your Kindle → Pair a Kindle**. Install `0.6.0-dev.1` or newer on the Kindle, then connect through **Settings → Web dashboard**.
+Open the displayed address, create your account using the printed setup code, and select **Your Kindle → Pair a Kindle**. Install v0.6.0 or newer on the Kindle, then connect through **Settings → Web dashboard**.
 
 The server runs in one container with SQLite. HTTP does not encrypt login or sync traffic. [Fresh-server setup, backups and troubleshooting](docs/VPS.md).
 
