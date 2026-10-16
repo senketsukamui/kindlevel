@@ -14,9 +14,9 @@ The plugin works offline. KOReader handles document rendering, saved positions a
 - Book journeys, breaks and returns.
 - 42 achievements with corner notifications and custom definitions.
 - EPUB, PDF, MOBI, FB2, TXT and other formats supported by KOReader.
-- Optional Go/Svelte dashboard with device pairing and manual statistics sync.
+- Optional Go/Svelte dashboard with device pairing and automatic statistics sync over Wi-Fi.
 
-**Release status:** v0.6.0 includes the plugin, Wi-Fi updates, dashboard sync and public HTTP support. Ongoing development is on [`develop`](https://github.com/senketsukamui/kindlevel/tree/develop). XP is reserved for future progression.
+**Release status:** v0.7.0 adds automatic background statistics sync over Wi-Fi, with quiet retries and a saved on/off toggle. Ongoing development is on [`develop`](https://github.com/senketsukamui/kindlevel/tree/develop). XP is reserved for future progression.
 
 ## Install on Kindle
 
@@ -33,13 +33,13 @@ Kindlevel reads native statistics through read-only connections. Its goals and u
 
 ## Self-host the dashboard
 
-On a VPS with Docker, Compose and Python 3, from a v0.6.0 source checkout:
+On a VPS with Docker, Compose and Python 3, from a v0.7.0 source checkout:
 
 ```sh
 sudo ./scripts/setup-server.sh http://YOUR_VPS_IP
 ```
 
-Open the displayed address, create your account using the printed setup code, and select **Your Kindle → Pair a Kindle**. Install v0.6.0 or newer on the Kindle, then connect through **Settings → Web dashboard**.
+Open the displayed address, create your account using the printed setup code, and select **Your Kindle → Pair a Kindle**. Install v0.7.0 or newer on the Kindle, then connect through **Settings → Web dashboard**. Statistics sync automatically while KOReader is awake and Wi-Fi is connected.
 
 The server runs in one container with SQLite. HTTP does not encrypt login or sync traffic. [Fresh-server setup, backups and troubleshooting](docs/VPS.md).
 

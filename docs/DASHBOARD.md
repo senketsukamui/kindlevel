@@ -1,6 +1,6 @@
 # Web dashboard and Kindle connection
 
-Kindlevel's dashboard uses Go, Svelte and SQLite in one Docker container. It supports owner login, Kindle pairing, and manual uploads of books, reading statistics and achievements. Node is used only during the build.
+Kindlevel's dashboard uses Go, Svelte and SQLite in one Docker container. It supports owner login, Kindle pairing, and uploads of books, reading statistics and achievements. Node is used only during the build. The v0.7.0 plugin syncs automatically over an existing Wi-Fi connection; v0.6.0 uses **Sync now**.
 
 ## Start and create your account
 
@@ -17,11 +17,11 @@ The `kindlevel-data` volume holds the account, device registrations, goals and r
 
 ## Pair your Kindle
 
-1. Install **v0.6.0 or newer**, which includes sync and public HTTP after approval. v0.5.0 does not contain sync. Use the release ZIP or build with `python3 scripts/build.py`, fully exit KOReader, then copy the contents of the ZIP's `kindlevel.koplugin` folder into the existing `koreader/plugins/kindlevel.koplugin/` over USB, replacing shipped files. Keep personal files. Start KOReader again and confirm the new version in Kindlevel's Settings footer.
+1. Install **v0.7.0 or newer** for automatic sync. v0.6.0 supports manual sync and public HTTP after approval; v0.5.0 does not contain sync. Use the release ZIP or build with `python3 scripts/build.py`, fully exit KOReader, then copy the contents of the ZIP's `kindlevel.koplugin` folder into the existing `koreader/plugins/kindlevel.koplugin/` over USB, replacing shipped files. Keep personal files. Start KOReader again and confirm the new version in Kindlevel's Settings footer.
 2. In the web dashboard, open **Your Kindle → Pair a Kindle**. The code expires after ten minutes and can be used once.
 3. On Kindle, open **Kindlevel → Settings → Web dashboard → Connect to server**, or **Tools → Kindlevel web dashboard**.
 4. Enter the reachable server address, pairing code and Kindle name.
-5. Choose **Sync now**. Connect through KOReader's Wi-Fi prompt. The dashboard refreshes every thirty seconds; **Refresh** updates it immediately.
+5. On v0.7.0 or newer, the first sync starts automatically when Wi-Fi is connected. With v0.6.0, choose **Sync now** and connect through KOReader's Wi-Fi prompt. The dashboard refreshes every thirty seconds; **Refresh** updates it immediately.
 
 The server gives each Kindle a separate token. **Revoke access** in the dashboard prevents further uploads while retaining its reading history. **Forget connection** on Kindle removes local credentials; it does not revoke the old token on the server.
 
@@ -53,7 +53,20 @@ For an existing HTTPS reverse proxy, set `KINDLEVEL_PUBLIC_URL` to the final HTT
 
 Each Kindle has its own complete snapshot. The dashboard initially shows demo data; after a device's first upload it shows that device's history. Select a Kindle on the device page to switch histories. Separate devices are not summed together.
 
-Sync is manual. It saves the open book's position and flushes native statistics without closing the reader. KOReader normally records the current page's time when you turn the page or close the book, so an ongoing page interval may appear on your next sync.
+Sync saves the open book's position and flushes native statistics without closing the reader. KOReader normally records the current page's time when you turn the page or close the book, so an ongoing page interval may appear on your next sync.
+
+### Automatic sync
+
+Available from v0.7.0.
+
+Automatic sync defaults to **on** for new and existing paired devices. Open **Kindlevel → Settings → Web dashboard → Automatic sync** to turn it off; **Sync now** remains available either way. No server update or new pairing is needed.
+
+- Sync starts shortly after KOReader reports a Wi-Fi connection, including startup/resume with Wi-Fi already connected, and repeats every **five minutes** while awake and connected. Repeated connection events are throttled to at most one attempt per minute.
+- Uploads run in the background without progress dialogs or success notifications. You can keep turning pages. The plugin never switches Wi-Fi on or off for automatic sync, and local servers work without Internet access.
+- Failed uploads retain their pending snapshot and retry after **one, five, then fifteen minutes**. Further failures retry every fifteen minutes. The connection menu shows the last successful sync and any error from the latest completed attempt.
+- Sleep, disconnecting, disabling automatic sync, and closing the active reader/file manager cancel background work. Sync resumes when KOReader is awake and connected again. Manual sync and update checks take priority.
+
+Automatic sync runs only while KOReader is running and awake; it does not wake the Kindle. A currently running upload holds KOReader's standby lock until it completes or is cancelled, with a four-minute watchdog for stuck workers.
 
 A pending snapshot is saved locally before uploading. Interrupted or failed requests retry the identical snapshot; after it is acknowledged, a retry also uploads the current history. The server checks increasing sequences and replaces the previous snapshot transactionally. Repeated requests do not add reading time twice; newer snapshots also remove records deleted from the Kindle.
 
@@ -97,7 +110,7 @@ npx playwright test
 
 Browser tests launch an isolated backend on port 8083 with disposable credentials and history. They cover login, goal persistence, desktop/mobile layouts, pairing, real history, revocation and empty devices. Screenshots go to the ignored `dist/previews/` directory.
 
-`tests/sync.lua` and `tests/sync_ui.lua` run in the official KOReader runtime, with the repository mounted at `/workspace`. They verify statistics parity, durable retries, address validation, actual pairing dialogs, open-book saving and subprocess uploads. `tests/sync_live.lua` verifies actual LuaSocket requests against a local Go backend; `tests/sync_server_fixture.py` prepares and checks its disposable account and pairing code on port 8082.
+`tests/sync.lua`, `tests/sync_ui.lua` and `tests/auto_sync.lua` run in the official KOReader runtime, with the repository mounted at `/workspace`. They verify statistics parity, durable retries, address validation, actual pairing dialogs, open-book saving, background uploads with live page turns, and cancellation on sleep/disconnect or disabling automatic sync. `tests/sync_live.lua` verifies actual LuaSocket requests against a local Go backend; `tests/sync_server_fixture.py` prepares and checks its disposable account and pairing code on port 8082.
 
 Physical Kindle Wi-Fi, sleep and TLS behavior still need device testing. The plugin remains usable offline without a server.
 

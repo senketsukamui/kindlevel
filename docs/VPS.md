@@ -2,7 +2,7 @@
 
 This guide starts from a fresh **Ubuntu 24.04 VPS** and serves the dashboard directly at `http://YOUR_VPS_IP`. It uses one container and keeps the project, configuration and data together. HTTP does not encrypt login or sync traffic.
 
-The dashboard and server sync are included in v0.6.0. These instructions use the release tag for a repeatable installation; ongoing development is on `develop`. The v0.5.0 plugin release does not include server sync.
+The dashboard and server sync are included from v0.6.0; v0.7.0 adds automatic Wi-Fi sync in the plugin. These instructions use the release tag for a repeatable installation; ongoing development is on `develop`. The v0.5.0 plugin release does not include server sync.
 
 ## 1. Install the requirements
 
@@ -61,7 +61,7 @@ Use a separate directory for personal projects:
 
 ```sh
 sudo mkdir -p /srv/personal-projects
-sudo git clone --branch v0.6.0 --depth 1 https://github.com/senketsukamui/kindlevel.git /srv/personal-projects/kindlevel
+sudo git clone --branch v0.7.0 --depth 1 https://github.com/senketsukamui/kindlevel.git /srv/personal-projects/kindlevel
 cd /srv/personal-projects/kindlevel
 ```
 
@@ -89,11 +89,11 @@ Make TCP port **80** reachable in your provider's firewall. If port 80 is alread
 
 ## 4. Connect your Kindle
 
-1. Install **v0.6.0 or newer** using the plugin release ZIP, or run `python3 scripts/build.py` from a source checkout. Copy the ZIP's plugin files to the Kindle over USB. Fully exit KOReader before copying, then restart it and verify the version in Settings.
+1. Install **v0.7.0 or newer** for automatic sync, using the plugin release ZIP or `python3 scripts/build.py` from a source checkout. Copy the ZIP's plugin files to the Kindle over USB. Fully exit KOReader before copying, then restart it and verify the version in Settings.
 2. In the dashboard, open **Your Kindle → Pair a Kindle**.
 3. On Kindle, open **Kindlevel → Settings → Web dashboard → Connect to server**.
 4. Enter `http://YOUR_VPS_IP` (including a custom port if configured), the pairing code and a device name. Choose **Allow HTTP** when prompted.
-5. Choose **Sync now**. The dashboard refreshes automatically, or you can press **Refresh**.
+5. Statistics sync automatically while KOReader is awake and Wi-Fi is connected. You can also choose **Sync now**. The dashboard refreshes automatically, or you can press **Refresh**.
 
 Pairing codes expire after ten minutes. Use **Revoke access** in the dashboard to disable a device token. [What syncs and how retries work](DASHBOARD.md).
 

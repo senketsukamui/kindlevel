@@ -29,7 +29,26 @@ end
 
 function Sync:state()
     local value=read(self.state_path,4096)
-    return value and json.decode(value) or {}
+    local state=value and json.decode(value) or {}
+    assert(type(state)=="table","Cannot read the server connection.")
+    return state
+end
+
+-- Kept with the connection, rather than the per-widget preferences: ReaderUI
+-- and FileManager may hold different copies of kindlevel.lua in memory.
+function Sync:setAutomatic(enabled)
+    local state=self:state()
+    assert(state.token,"Pair this Kindle with your dashboard first.")
+    state.auto_sync=enabled==true
+    write(self.state_path,json.encode(state))
+end
+
+function Sync:recordAttempt(token,message)
+    local state=self:state()
+    if state.token~=token then return end
+    state.last_attempt=os.time()
+    state.last_error=message and util.fixUtf8(tostring(message):sub(1,768)) or nil
+    write(self.state_path,json.encode(state))
 end
 
 function Sync:network(allow_http)
@@ -43,7 +62,7 @@ function Sync:pair(server,code,name,allow_http)
         local response,failure=self:network(allow_http):request(address,"/api/v1/devices/pair",json.encode{code=code,name=name})
         if not response then return nil,failure end
         assert(type(response.token)=="string" and #response.token==43 and response.token:match("^[%w_-]+$") and type(response.device_id)=="string" and response.device_id:match("^[a-f0-9]+$") and #response.device_id==32,"The server returned invalid pairing credentials.")
-        write(self.state_path,json.encode{server=address,token=response.token,device_id=response.device_id,name=name,allow_http=allow_http==true,sequence=0})
+        write(self.state_path,json.encode{server=address,token=response.token,device_id=response.device_id,name=name,allow_http=allow_http==true,sequence=0,auto_sync=true})
         os.remove(self.pending_path)
         return true
     end)
@@ -70,8 +89,11 @@ function Sync:upload(owner)
             response,message=self:network(state.allow_http):request(state.server,"/api/v1/sync",pending,state.token)
             if not response then return nil,message end
             assert(response.accepted_sequence==payload.sequence,"The server did not confirm this reading snapshot.")
-            state.sequence=payload.sequence;state.last_sync=os.time()
-            write(self.state_path,json.encode(state))
+            local latest=self:state()
+            assert(latest.token==state.token and latest.server==state.server,"The server connection changed during sync.")
+            latest.sequence=payload.sequence;latest.last_sync=os.time();latest.last_error=nil
+            write(self.state_path,json.encode(latest))
+            state=latest
             assert(os.remove(self.pending_path),"Cannot clear the acknowledged snapshot. Check available storage.")
             pending=nil -- After retrying an older snapshot, also send current reading history.
         end

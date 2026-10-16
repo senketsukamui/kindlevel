@@ -2,7 +2,9 @@
 
 Run commands from the repository root unless noted otherwise.
 
-Kindlevel v0.6.0 includes [Wi-Fi updates](UPDATES.md) and [dashboard pairing and statistics sync](DASHBOARD.md), including public HTTP after explicit approval. Ongoing development is on the `develop` branch. The installed version and release filenames come from `kindlevel.koplugin/kindlevel_version.lua`.
+Kindlevel v0.7.0 includes [Wi-Fi updates](UPDATES.md) and [dashboard pairing and statistics sync](DASHBOARD.md), including public HTTP after explicit approval. Ongoing development is on the `develop` branch. The installed version and release filenames come from `kindlevel.koplugin/kindlevel_version.lua`.
+
+The v0.7.0 plugin adds automatic background statistics sync over an existing Wi-Fi connection. It uses the v0.6.0 server API and existing pairing credentials. See [automatic sync behavior](DASHBOARD.md#automatic-sync).
 
 ## Dashboard development
 

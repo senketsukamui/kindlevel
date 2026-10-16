@@ -64,10 +64,16 @@ local core=Sync:new{state_path=folder .. "/state.json",pending_path=folder .. "/
 core:forget()
 assert(core:pair("https://books.example.com","ABCDE-FG234","Test Kindle",false))
 assert(core:state().sequence==0)
+assert(core:state().auto_sync==true,"new connections enable automatic sync")
+core:setAutomatic(false)
 local result,err=core:upload(owner);assert(not result and err=="offline" and lfs.attributes(core.pending_path),"failed upload keeps outbox")
 failed=false
 assert(core:upload(owner));assert(core:state().sequence==2 and not lfs.attributes(core.pending_path),"retry acknowledges older data and also uploads current history")
 assert(core:upload(owner));assert(core:state().sequence==3,"later sync gets a new sequence")
+assert(core:state().auto_sync==false,"acknowledgements preserve the saved automatic-sync preference")
+core:recordAttempt(core:state().token,"offline")
+assert(core:state().last_error=="offline" and core:state().last_attempt,"failed attempt status survives reopening the menu")
+assert(core:upload(owner) and not core:state().last_error,"a successful upload clears the previous failure")
 assert(stats:query(function(conn) return conn:rowexec("SELECT count(*) FROM page_stat_data") end)==stable,"native statistics unchanged")
 local saved=stats;stats=Stats:new{path="/tmp/kindlevel-nonexistent-sync.sqlite3"};goals.stats=stats
 local empty=Export.snapshot(owner,3)

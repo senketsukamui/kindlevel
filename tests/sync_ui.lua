@@ -50,6 +50,8 @@ UIManager:forceRePaint();Device.screen.bb:writePNG("/workspace/dist/previews/kin
 UIManager:scheduleIn(0.1,function() dialog.buttons[1][2].callback() end)
 UIManager:scheduleIn(1,function()
     assert(core:state().token,"pairing subprocess saved the device token")
+    require("kindlevel_auto_sync"):stop()
+    core:setAutomatic(false) -- This fixture exercises explicit foreground sync.
     UIManager:close(UIManager:getTopmostVisibleWidget())
     owner:openBook(owner.home.library.books[1])
 end)

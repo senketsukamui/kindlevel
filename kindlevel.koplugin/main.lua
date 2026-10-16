@@ -39,6 +39,9 @@ function Kindlevel:init()
             if require("apps/filemanager/filemanager").instance == self.ui and not require("apps/reader/readerui").instance then self:checkAchievements() end
         end)
     end
+    UIManager:nextTick(function()
+        if require("kindlevel_auto_sync"):owner()==self then require("kindlevel_auto_sync"):wake() end
+    end)
 end
 
 function Kindlevel:addToMainMenu(items)
@@ -77,6 +80,8 @@ function Kindlevel:getUpdater()
 end
 
 local function networkJob(task,message,callback,before)
+    -- A foreground operation takes priority; the durable outbox survives.
+    require("kindlevel_auto_sync"):stop()
     local updater=require("kindlevel_updater")
     if updater.busy then UIManager:show(InfoMessage:new{text="Another network operation is running."});return end
     require("ui/network/manager"):runWhenOnline(function()
@@ -90,6 +95,7 @@ local function networkJob(task,message,callback,before)
                 if reader then reader:handleEvent(require("ui/event"):new("ReadingResumed")) end
                 updater.busy=false;require("ui/network/manager"):afterWifiAction()
                 callback(nil,"Cannot prepare reading history. Close the book and try again.")
+                require("kindlevel_auto_sync"):wake()
                 return
             end
         end
@@ -105,6 +111,7 @@ local function networkJob(task,message,callback,before)
             if not ok then callback(nil,"The network operation failed. Try again.")
             elseif completed then callback(result,err)
             else callback(nil,nil,true) end
+            require("kindlevel_auto_sync"):wake()
         end)
     end)
 end
@@ -173,15 +180,33 @@ function Kindlevel:dashboardConnection()
     local dialog
     local title="Your web dashboard"
     if state.server then title=title .. "\n" .. state.server .. "\n" .. (state.last_sync and "Last synced: " .. os.date("%Y-%m-%d %H:%M",state.last_sync) or "Ready for the first sync") end
-    dialog=ButtonDialog:new{title=title,buttons={
+    if state.last_error then title=title .. "\nLast attempt failed · retry pending" end
+    local buttons={
         {{text=state.token and "Pair another server" or "Connect to server",callback=function() UIManager:close(dialog);self:pairDashboard() end}},
         {{text="Sync now",enabled=state.token~=nil,callback=function() UIManager:close(dialog);self:syncDashboard() end}},
+        {{text="Automatic sync: " .. (state.auto_sync~=false and "on" or "off"),enabled=state.token~=nil,callback=function()
+            require("kindlevel_auto_sync"):stop()
+            local saved=pcall(core.setAutomatic,core,state.auto_sync==false)
+            UIManager:close(dialog)
+            if not saved then UIManager:show(InfoMessage:new{text="Cannot save the automatic sync setting. Check free space."});return end
+            require("kindlevel_auto_sync"):wake(true)
+            self:dashboardConnection()
+        end}},
         {{text="Forget connection",enabled=state.token~=nil,callback=function()
             UIManager:close(dialog)
-            UIManager:show(require("ui/widget/confirmbox"):new{text="Forget this server connection on the Kindle? Reading history stays on both devices. Revoke the Kindle in the web dashboard to disable its old token.",ok_text="Forget",ok_callback=function() core:forget() end})
+            UIManager:show(require("ui/widget/confirmbox"):new{text="Forget this server connection on the Kindle? Reading history stays on both devices. Revoke the Kindle in the web dashboard to disable its old token.",ok_text="Forget",ok_callback=function()
+                require("kindlevel_auto_sync"):stop()
+                core:forget()
+            end})
         end}},
         {{text="Close",callback=function() UIManager:close(dialog) end}},
-    }}
+    }
+    if state.last_error then
+        table.insert(buttons,#buttons,{{text="Last sync error",callback=function()
+            UIManager:show(InfoMessage:new{text=state.last_error})
+        end}})
+    end
+    dialog=ButtonDialog:new{title=title,buttons=buttons}
     UIManager:show(dialog)
 end
 
@@ -205,7 +230,8 @@ function Kindlevel:pairDashboard()
             UIManager:close(dialog)
             networkJob(function() return core:pair(address,code,name,allow_http) end,"Connecting your Kindle…",function(result,message,cancelled)
                 if cancelled then return end
-                UIManager:show(InfoMessage:new{text=result and "Kindle connected. Open Web dashboard and choose Sync now to upload your reading history." or message or "Cannot connect to the server."})
+                if result then require("kindlevel_auto_sync"):wake(true) end
+                UIManager:show(InfoMessage:new{text=result and "Kindle connected. Reading history will sync automatically while Wi-Fi is connected. You can also choose Sync now in Web dashboard." or message or "Cannot connect to the server."})
             end)
         end
         if server:sub(1,7)=="http://" then
@@ -220,15 +246,20 @@ function Kindlevel:syncDashboard()
     if not core:state().token then self:pairDashboard();return end
     networkJob(function() return core:upload(self) end,"Syncing your reading history…",function(result,err,cancelled)
         if cancelled then return end
-        if result then UIManager:show(InfoMessage:new{text=string.format("Reading history synced.\n\n%d books · %d book-days · %d achievements\nOpen or refresh your web dashboard to see it.",result.books or 0,result.activity or 0,result.achievements or 0)})
+        if result then
+            local auto=require("kindlevel_auto_sync")
+            auto.retry_at=nil;auto.failures=0
+            UIManager:show(InfoMessage:new{text=string.format("Reading history synced.\n\n%d books · %d book-days · %d achievements\nOpen or refresh your web dashboard to see it.",result.books or 0,result.activity or 0,result.achievements or 0)})
         else UIManager:show(InfoMessage:new{text=err or "Could not sync. Your pending snapshot is kept for retry."}) end
-    end,function()
-        local reader=require("apps/reader/readerui").instance
-        if reader then reader:saveSettings() end
-        self:getGoals()
-        self:checkAchievements(false)
-        self.settings:flush()
-    end)
+    end,function() self:prepareDashboardSync() end)
+end
+
+function Kindlevel:prepareDashboardSync()
+    local reader=require("apps/reader/readerui").instance
+    if reader then reader:saveSettings() end
+    self:getGoals()
+    self:checkAchievements(false)
+    self.settings:flush()
 end
 
 function Kindlevel:previewAchievement(id)
@@ -363,6 +394,7 @@ function Kindlevel:onReaderReady()
         achievements.recordOpen(self,{title=props.title or props.display_title,author=authors})
     end
     self:scheduleAchievementCheck(true)
+    require("kindlevel_auto_sync"):wake()
 end
 function Kindlevel:onPageUpdate() self:scheduleAchievementCheck(false) end
 function Kindlevel:onPosUpdate() self:scheduleAchievementCheck(false) end
@@ -375,19 +407,35 @@ function Kindlevel:onBookMetadataChanged()
     self.goals_imported = false
     self:scheduleAchievementCheck(true)
 end
-function Kindlevel:onResume() self:scheduleAchievementCheck(true) end
+function Kindlevel:onResume()
+    self:scheduleAchievementCheck(true)
+    local auto=require("kindlevel_auto_sync")
+    auto.suspended=false
+    auto:wake()
+end
+
+function Kindlevel:onNetworkConnected() require("kindlevel_auto_sync"):wake(true) end
+function Kindlevel:onNetworkDisconnecting() require("kindlevel_auto_sync"):stop() end
+function Kindlevel:onNetworkDisconnected() require("kindlevel_auto_sync"):stop() end
+
+function Kindlevel:onCloseWidget()
+    local auto=require("kindlevel_auto_sync")
+    if auto:owner()==self or auto.job and auto.job.owner==self then auto:stop() end
+end
 
 function Kindlevel:cancelAchievementCheck()
     if self._achievement_pending then UIManager:unschedule(self._achievement_pending); self._achievement_pending = nil end
 end
 
 function Kindlevel:onSuspend()
+    require("kindlevel_auto_sync"):stop(true)
     if self.ui.document then require("kindlevel_achievements").recordSessionBreak(self) end
     self:cancelAchievementCheck()
     require("kindlevel_achievement_toast"):clear()
 end
 
 function Kindlevel:onCloseDocument()
+    require("kindlevel_auto_sync"):stop()
     require("kindlevel_achievements").recordSessionBreak(self)
     self._achievement_stopped = true
     self:cancelAchievementCheck()
