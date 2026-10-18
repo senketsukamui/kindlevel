@@ -96,8 +96,47 @@ assert(modified:activate(mr))
 assert(read(modified.plugin_dir .. "/assets/achievements/book.svg")=="personal replacement icon","modified built-in asset preserved")
 local edited=make();local er=assert(edited:check());assert(edited:prepare(er))
 write(edited.plugin_dir .. "/kindlevel_achievement_catalog.lua","return {} -- personal edits")
-assert(not edited:activate(er),"modified built-in Lua is not silently overwritten")
-assert(read(edited.plugin_dir .. "/kindlevel_achievement_catalog.lua"):find("personal edits",1,true),"local Lua edits remain intact")
+assert(edited:activate(er),"local Lua edits no longer block a verified update")
+assert(not read(edited.plugin_dir .. "/kindlevel_achievement_catalog.lua"):find("personal edits",1,true),"shipped code is replaced by verified code")
+assert(read(edited.backup .. "/kindlevel_achievement_catalog.lua"):find("personal edits",1,true),"local Lua edits remain intact in the full backup")
+
+local reinstall=make();local same=reinstall:selectRelease(template)
+reinstall.installed=incoming;same.newer=false
+assert(not reinstall:prepare(same),"same-version installation requires explicit repair mode")
+assert(reinstall:prepare(same,true) and reinstall:activate(same),"same-version repair can reinstall a damaged application")
+
+local damaged=make();local dr=assert(damaged:check());assert(damaged:prepare(dr))
+write(damaged.plugin_dir .. "/update-manifest.json","not json")
+write(damaged.plugin_dir .. "/kindlevel_app.lua","this is broken Lua")
+assert(damaged:activate(dr),"a damaged installed manifest and Lua file do not block repair")
+assert(read(damaged.backup .. "/kindlevel_app.lua")=="this is broken Lua","broken code retained for recovery")
+
+local interrupted=make();local ir=assert(interrupted:check());assert(interrupted:prepare(ir))
+assert(os.rename(interrupted.plugin_dir,interrupted.backup))
+assert(interrupted:activate(ir),"recovery can install when a power loss left the app directory missing")
+assert(read(interrupted.backup .. "/kindlevel_version.lua"):find(current,1,true),"missing-app repair retains the earlier backup")
+write(interrupted.plugin_dir .. "/custom_achievements.lua","return {} -- newest personal edits")
+write(interrupted.plugin_dir .. "/books/A Quiet Beginning.sdr/metadata.epub.lua","return {percent_finished=0.99}")
+assert(interrupted:restoreBackup(),"offline rollback works without downloading anything")
+assert(read(interrupted.plugin_dir .. "/kindlevel_version.lua"):find(current,1,true),"offline rollback restores the previous version")
+assert(read(interrupted.plugin_dir .. "/custom_achievements.lua"):find("newest personal edits",1,true),"rollback preserves latest personal settings")
+assert(read(interrupted.plugin_dir .. "/books/A Quiet Beginning.sdr/metadata.epub.lua"):find("0.99",1,true),"rollback preserves latest saved book position")
+
+local diagnostic=make()
+local http=require("socket.http");local originalRequest=http.request;local requests=0
+http.request=function(options)
+    requests=requests+1
+    if requests==1 then options.sink("partial download");return nil,"timeout" end
+    options.sink("complete download");return 1,200,{}
+end
+local destination=diagnostic.work_dir .. "/retry.zip";util.makePath(diagnostic.work_dir)
+assert(Network:new(diagnostic.plugin_dir .. "/assets/cacert.pem"):fetch(asset_url,destination,4096))
+assert(requests==2 and read(destination)=="complete download","transient downloads retry from scratch without retaining partial bytes")
+requests=0
+http.request=function() requests=requests+1;error("TLS certificate verification failed") end
+local _,tlsError=Network:new(diagnostic.plugin_dir .. "/assets/cacert.pem"):fetch(asset_url,nil,4096)
+assert(requests==1 and tlsError:find("date and time",1,true),"TLS verification failures stay verified and report useful diagnostics")
+http.request=originalRequest
 
 for _,name in ipairs{"traversal.zip","absolute.zip","symlink.zip","missing-file.zip","tampered-file.zip","wrong-version.zip","bad-manifest.zip"} do
     local candidate=make()

@@ -27,6 +27,8 @@ Requires a jailbroken Kindle with KOReader. Keep its **Reading statistics** plug
 3. Copy the contents of `kindlevel.koplugin` into `koreader/plugins/kindlevel.koplugin/`, replacing shipped files while keeping personal files. Avoid nesting another plugin folder inside it.
 4. Start KOReader and open **Tools → Kindlevel**. Check the version in Kindlevel's Settings footer.
 
+Development builds also include **`kindlevel-recovery.koplugin`**: copy this folder beside the main plugin in `koreader/plugins/`. It provides a separate **Tools → Kindlevel recovery** menu for Wi-Fi repair and offline rollback, even if Kindlevel cannot load. See [updates and recovery](docs/UPDATES.md).
+
 Three original sample books are included. Select your library through **Settings → Choose books folder**. For automatic opening, enable **Show home on file browser entry** and set KOReader's **Start with** option to **file browser**.
 
 Kindlevel reads native statistics through read-only connections. Its goals and unlocks are stored separately; reading positions stay in KOReader's document settings.

@@ -9,6 +9,12 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 PLUGIN = ROOT / "kindlevel.koplugin"
 VERSION = re.fullmatch(r'\s*return "([0-9A-Za-z.+-]+)"\s*', (PLUGIN / "kindlevel_version.lua").read_text()).group(1)
+RECOVERY_FILES = {
+    "main.lua": "recovery/main.lua", "_meta.lua": "recovery/_meta.lua",
+    "updater.lua": "kindlevel_updater.lua", "network.lua": "kindlevel_update_network.lua",
+    "ui.lua": "kindlevel_update_ui.lua", "cacert.pem": "assets/cacert.pem",
+    "NOTICE.md": "NOTICE.md",
+}
 
 
 def main():
@@ -31,6 +37,10 @@ def main():
             archive.write(path, path.relative_to(ROOT))
         archive.write(ROOT / "LICENSE", "LICENSE")
         archive.write(ROOT / "LICENSE", "kindlevel.koplugin/LICENSE")
+        # A separate plugin survives app-directory replacement and app load errors.
+        for destination, source in RECOVERY_FILES.items():
+            archive.write(PLUGIN / source, "kindlevel-recovery.koplugin/" + destination)
+        archive.write(ROOT / "LICENSE", "kindlevel-recovery.koplugin/LICENSE")
         license_data = (ROOT / "LICENSE").read_bytes()
         manifest_files.append({"path": "LICENSE", "size": len(license_data), "sha256": hashlib.sha256(license_data).hexdigest()})
         archive.writestr("kindlevel.koplugin/update-manifest.json", json.dumps({"schema": 1, "version": VERSION, "files": manifest_files}, indent=2)+"\n")
