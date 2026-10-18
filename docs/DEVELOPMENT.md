@@ -6,6 +6,8 @@ Kindlevel v0.7.0 includes [Wi-Fi updates](UPDATES.md) and [dashboard pairing and
 
 The v0.7.0 plugin adds automatic background statistics sync over an existing Wi-Fi connection. It uses the v0.6.0 server API and existing pairing credentials. See [automatic sync behavior](DASHBOARD.md#automatic-sync).
 
+The v0.8.0 development build separates the app entry point (`kindlevel_app.lua`) from a small bootstrap (`main.lua`, `kindlevel_bootstrap.lua`) and a standalone recovery plugin. `scripts/build.py` assembles the recovery folder from the same updater, network and UI sources; no duplicate updater source needs maintaining. See [repair and recovery](UPDATES.md#repair-and-recovery-v080-dev).
+
 ## Dashboard development
 
 Server source is in `server/`, with the Svelte app in `server/web/`. Docker is enough to build and preview both:

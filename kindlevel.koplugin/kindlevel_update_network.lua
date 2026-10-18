@@ -32,7 +32,33 @@ function Network:new(cafile)
     return setmetatable({cafile=cafile},self)
 end
 
+function Network.connectionError(address,reason)
+    local host=require("socket.url").parse(address).host or "GitHub"
+    local detail=tostring(reason or "unknown networking error"):lower()
+    if detail:find("certificate",1,true) or detail:find("ssl",1,true) or detail:find("tls",1,true) then
+        return "HTTPS verification failed for " .. host .. ". Check the Kindle's date and time and update KOReader if its TLS support is old.",false
+    elseif detail:find("timeout",1,true) or detail:find("timed out",1,true) then
+        return "Connection timed out while contacting " .. host .. ". Check Wi-Fi or try another network.",true
+    elseif detail:find("host not found",1,true) or detail:find("name or service",1,true) or detail:find("resolve",1,true) then
+        return "Cannot resolve " .. host .. ". Check Wi-Fi DNS or try another network.",true
+    elseif detail:find("refused",1,true) then
+        return "Connection refused by " .. host .. ". Check whether this Wi-Fi network blocks GitHub.",true
+    elseif detail:find("exceeds",1,true) then
+        return "The update response exceeds its size limit.",false
+    end
+    return "Cannot contact " .. host .. ". Check Wi-Fi and try again. (" .. detail:sub(1,160) .. ")",true
+end
+
 function Network:fetch(address,destination,limit)
+    for attempt=1,2 do
+        local result,err,bytes,final,retry=self:fetchOnce(address,destination,limit)
+        if result then return result,err,bytes,final end
+        if destination then os.remove(destination) end
+        if not retry or attempt==2 then return nil,err end
+    end
+end
+
+function Network:fetchOnce(address,destination,limit)
     local http=require("socket.http")
     local https=require("ssl.https")
     local socketutil=require("socketutil")
@@ -52,7 +78,8 @@ function Network:fetch(address,destination,limit)
             local connection=make_tls()
             local connect=connection.connect
             function connection:connect(host,port)
-                local result=connect(self,host,port)
+                local result,err=connect(self,host,port)
+                if not result then return nil,err end
                 if not Network.certificateMatches(self.sock:getpeercertificate(),host) then
                     self.sock:close(); error("TLS certificate does not match the update server")
                 end
@@ -76,10 +103,13 @@ function Network:fetch(address,destination,limit)
         end
         socketutil:set_timeout(10,90)
         local ok,success,code,headers=pcall(http.request,{url=current,create=create,redirect=false,
-            headers={Accept="application/vnd.github+json",["User-Agent"]="Kindlevel/" .. require("kindlevel_version")},sink=sink})
+            headers={Accept=current:find("api.github.com",1,true) and "application/vnd.github+json" or "*/*",["User-Agent"]="Kindlevel updater"},sink=sink})
         socketutil:reset_timeout()
         if file then file:close() end
-        if not ok or not success then return nil,"Cannot download the update. Check Wi-Fi and the Kindle's date and time." end
+        if not ok or not success then
+            local message,retry=Network.connectionError(current,ok and code or success)
+            return nil,message,nil,nil,retry
+        end
         if code==200 then return destination and true or table.concat(chunks),nil,bytes,current end
         if code==301 or code==302 or code==303 or code==307 or code==308 then
             if not headers or not headers.location or redirect==5 then return nil,"Too many update redirects." end
@@ -87,7 +117,7 @@ function Network:fetch(address,destination,limit)
         else
             if code==403 or code==429 then return nil,"GitHub refused the request or its request limit was reached. Try again later." end
             if code==404 then return nil,"No update release was found on GitHub." end
-            return nil,"GitHub returned HTTP " .. tostring(code) .. ". Try again later."
+            return nil,"GitHub returned HTTP " .. tostring(code) .. ". Try again later.",nil,nil,tonumber(code) and tonumber(code)>=500
         end
     end
 end

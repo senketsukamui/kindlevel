@@ -97,7 +97,7 @@ function Auto:run()
     local owner,core,state=self:state()
     if not owner then return end
     local updater=require("kindlevel_updater")
-    if updater.busy then self:arm(15);return end
+    if updater.busy or (package.loaded.kindlevel_update_activity or {}).busy then self:arm(15);return end
     self.last_attempt=os.time()
     local prepared=pcall(owner.prepareDashboardSync,owner)
     if not prepared then

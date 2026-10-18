@@ -49,6 +49,7 @@ UIManager:forceRePaint();Device.screen.bb:writePNG("/workspace/dist/previews/set
 owner:openBook(owner.home.library.books[1])
 local network=require("ui/network/manager")
 network.runWhenOnline=function(_,callback) callback() end
+network.runWhenConnected=network.runWhenOnline
 network.afterWifiAction=function() end
 local saved_file
 UIManager.restartKOReader=function()

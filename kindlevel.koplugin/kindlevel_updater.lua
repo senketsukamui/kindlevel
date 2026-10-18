@@ -230,9 +230,10 @@ function Updater:unpack(path,release)
     if not ok then error(err) end
 end
 
-function Updater:prepare(release)
+function Updater:prepare(release,reinstall)
     local ok,err=pcall(function()
-        assert(release.newer and Updater.compare(release.version,self.installed)>0,"The release is not newer than the installed version.")
+        local comparison=Updater.compare(release.version,self.installed)
+        assert(comparison>0 or reinstall==true and comparison==0,"The release is not newer than the installed version.")
         mkdir(self.work_dir)
         local hash=release.sha256
         if not hash then
@@ -258,11 +259,14 @@ function Updater:preserve(files)
     local old={}
     local old_path=self.plugin_dir .. "/" .. MANIFEST
     if lfs.attributes(old_path,"mode")=="file" then
-        local content=json.decode(read(old_path))
-        for _,file in ipairs(content.files or {}) do
-            assert(safePath(file.path) and digest(file.sha256),"The installed file manifest is invalid.")
-            old[file.path]=file
-        end
+        -- A damaged local manifest must not prevent a verified repair. Treat
+        -- it like a legacy installation; the entire old directory is backed up.
+        pcall(function()
+            local content=json.decode(read(old_path))
+            for _,file in ipairs(content.files or {}) do
+                if safePath(file.path) and digest(file.sha256) then old[file.path]=file end
+            end
+        end)
     end
     local count=0
     local function visit(directory,prefix)
@@ -275,9 +279,8 @@ function Updater:preserve(files)
             elseif relative~=MANIFEST then
                 count=count+1;assert(count<=10000,"Too many local plugin files to preserve.")
                 local changed=old[relative] and self.shaFile(path)~=old[relative].sha256:lower()
-                if changed and relative:sub(-4)==".lua" then
-                    error("A built-in Lua file was modified. Keep personal achievements in custom_achievements.lua or update using USB.")
-                end
+                -- Shipped code is replaced by the verified release. Local edits
+                -- remain in the full backup instead of permanently blocking OTA.
                 if not files[relative] and not old[relative] or changed and relative:sub(1,7)=="assets/" then
                     copy(path,self.stage .. "/" .. relative)
                 end
@@ -297,11 +300,13 @@ function Updater:activate(release)
                 "The staged update changed before installation.")
         end
         -- Save/close the reader before calling this: sample-book sidecars may be here.
-        self:preserve(files)
-        remove(self.backup)
+        local exists=lfs.symlinkattributes(self.plugin_dir,"mode")=="directory"
+        if exists then self:preserve(files);remove(self.backup) end
         write(self.work_dir .. "/pending.json",json.encode{version=release.version})
-        assert(self.rename(self.plugin_dir,self.backup),"Cannot back up the installed plugin.")
-        moved=true;ffiUtil.fsyncDirectory(self.parent)
+        if exists then
+            assert(self.rename(self.plugin_dir,self.backup),"Cannot back up the installed plugin.")
+            moved=true;ffiUtil.fsyncDirectory(self.parent)
+        end
         assert(self.rename(self.stage,self.plugin_dir),"Cannot activate the new plugin.")
         moved=false;ffiUtil.fsyncDirectory(self.parent)
         os.remove(self.work_dir .. "/pending.json")
@@ -313,6 +318,35 @@ function Updater:activate(release)
         ffiUtil.fsyncDirectory(self.parent)
     end
     os.remove(self.work_dir .. "/pending.json")
+    return nil,tostring(err):gsub("^.-:%d+:%s*","")
+end
+
+function Updater:restoreBackup()
+    local displaced
+    local ok,err=pcall(function()
+        assert(lfs.symlinkattributes(self.backup,"mode")=="directory","No previous plugin backup is available.")
+        assert(loadstring(read(self.backup .. "/main.lua")),"The previous plugin's entry point is damaged.")
+        if lfs.symlinkattributes(self.plugin_dir,"mode")=="directory" then
+            local content=read(self.backup .. "/" .. MANIFEST)
+            local _,files=self.manifest(content,json.decode(content).version)
+            local stage=self.stage
+            self.stage=self.backup
+            local saved,message=pcall(self.preserve,self,files)
+            self.stage=stage
+            assert(saved,message)
+            -- Retain the displaced installation too, including edited code.
+            displaced=self.parent .. "/.kindlevel-replaced-" .. os.time()
+            local suffix=0
+            while lfs.symlinkattributes(displaced) do suffix=suffix+1;displaced=self.parent .. "/.kindlevel-replaced-" .. os.time() .. "-" .. suffix end
+            assert(self.rename(self.plugin_dir,displaced),"Cannot keep the current plugin before restoring.")
+        end
+        local restored=self.rename(self.backup,self.plugin_dir)
+        if not restored and displaced then self.rename(displaced,self.plugin_dir) end
+        assert(restored,"Cannot restore the previous plugin.")
+        ffiUtil.fsyncDirectory(self.parent)
+        os.remove(self.work_dir .. "/pending.json")
+    end)
+    if ok then return true end
     return nil,tostring(err):gsub("^.-:%d+:%s*","")
 end
 
