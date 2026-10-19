@@ -61,7 +61,7 @@ Use a separate directory for personal projects:
 
 ```sh
 sudo mkdir -p /srv/personal-projects
-sudo git clone --branch v0.7.0 --depth 1 https://github.com/senketsukamui/kindlevel.git /srv/personal-projects/kindlevel
+sudo git clone --branch v1.0.0 --depth 1 https://github.com/senketsukamui/kindlevel.git /srv/personal-projects/kindlevel
 cd /srv/personal-projects/kindlevel
 ```
 
@@ -89,7 +89,7 @@ Make TCP port **80** reachable in your provider's firewall. If port 80 is alread
 
 ## 4. Connect your Kindle
 
-1. Install **v0.7.0 or newer** for automatic sync, using the plugin release ZIP or `python3 scripts/build.py` from a source checkout. Copy the ZIP's plugin files to the Kindle over USB. Fully exit KOReader before copying, then restart it and verify the version in Settings.
+1. Install **v1.0.0**, using the plugin release ZIP or `python3 scripts/build.py` from the release checkout. Fully exit KOReader and copy both `kindlevel.koplugin` and `kindlevel-recovery.koplugin` into `koreader/plugins/` over USB, replacing shipped files while keeping personal files. Restart KOReader and verify the version in Settings.
 2. In the dashboard, open **Your Kindle → Pair a Kindle**.
 3. On Kindle, open **Kindlevel → Settings → Web dashboard → Connect to server**.
 4. Enter `http://YOUR_VPS_IP` (including a custom port if configured), the pairing code and a device name. Choose **Allow HTTP** when prompted.

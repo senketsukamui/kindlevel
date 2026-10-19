@@ -4,23 +4,23 @@ The updater is included from v0.5.0. If you use v0.4.0 or earlier, install v0.5.
 
 ## Use it
 
-1. Open **Kindlevel → Settings → Check for updates**, or **Tools → Kindlevel updates**.
+1. Open **Kindlevel → Settings → Updates & recovery → Check for updates**, or **Tools → Kindlevel updates**.
 2. Connect to Wi-Fi using KOReader's normal prompt.
 3. If a newer stable release is available, review the installed and available versions and choose **Install & restart**.
 4. Wait for the download and verification to finish. KOReader saves the open book and restarts after installation.
 
-### Repair and recovery (v0.8.0-dev)
+### Repair and recovery (v1.0.0)
 
-The development build separates the reading app from its recovery updater:
+Version 1.0.0 separates the reading app from its recovery updater:
 
 - `kindlevel.koplugin/main.lua` is a small bootstrap; the reading app lives in `kindlevel_app.lua`.
 - **`kindlevel-recovery.koplugin`** has its own updater, networking code, certificate bundle and UI. It does not import Kindlevel's app modules. App updates never replace this helper.
 - **Tools → Kindlevel recovery → Update or reinstall over Wi-Fi** works if the app fails to load, or an interrupted install left its folder missing. When the latest release is already installed, the confirmation offers **Reinstall & restart**.
 - **Restore previous version (offline)** restores the saved backup without downloading anything, while retaining current custom achievements and saved positions. The displaced plugin is kept in `.kindlevel-replaced-TIMESTAMP` beside the plugin folders.
 
-For a USB installation, copy **both** plugin folders from the development ZIP into `koreader/plugins/`, then restart KOReader. When a working older updater installs this build over Wi-Fi, the bootstrap installs the recovery helper alongside the app on its next launch. The helper becomes independently discoverable on the following KOReader restart. A load failure during that first launch also exposes its recovery menu through the bootstrap. Keep both plugins enabled in KOReader's plugin manager.
+For a USB installation, copy **both** plugin folders from the release ZIP into `koreader/plugins/`, then restart KOReader. When a working older updater installs this version over Wi-Fi, the bootstrap installs the recovery helper alongside the app on its next launch. The helper becomes independently discoverable on the following KOReader restart. A load failure during that first launch also exposes its recovery menu through the bootstrap. Keep both plugins enabled in KOReader's plugin manager.
 
-**If your current version says a built-in Lua file was modified:** its old updater deliberately blocks that installation. Fully exit KOReader and install this development build's two folders over USB once, replacing shipped files while keeping personal files. That installs the new update policy and recovery helper. Future verified updates replace modified built-in code after confirmation and retain your edits in the complete previous-plugin backup.
+**If your current version says a built-in Lua file was modified:** its old updater deliberately blocks that installation. Fully exit KOReader and install v1.0.0's two folders over USB once, replacing shipped files while keeping personal files. That installs the new update policy and recovery helper. Future verified updates replace modified built-in code after confirmation and retain your edits in the complete previous-plugin backup.
 
 Recovery still needs a working KOReader installation, writable storage and, for downloads, a reachable GitHub release over verified HTTPS. It cannot guarantee updates through a failed network, damaged recovery files or incompatible KOReader. Updating the recovery helper itself is a separate USB maintenance operation; normal app upgrades preserve it.
 
@@ -30,7 +30,7 @@ You can cancel during downloading and staging. The brief final installation phas
 
 ## Files and recovery
 
-Reading statistics, goals and achievement preferences remain in KOReader's settings directories. The updater preserves `custom_achievements.lua`, custom icons, other unmanaged plugin files and sample-book sidecars, including changes saved immediately before installation. Modified built-in assets are preserved when a readable installed manifest identifies them. In the development build, modified built-in Lua files are replaced by verified release files and retained in the full backup. A damaged installed manifest no longer blocks repair. Stable v0.7.0 and older updaters still reject modified built-in Lua files.
+Reading statistics, goals and achievement preferences remain in KOReader's settings directories. The updater preserves `custom_achievements.lua`, custom icons, other unmanaged plugin files and sample-book sidecars, including changes saved immediately before installation. Modified built-in assets are preserved when a readable installed manifest identifies them. From v1.0.0, modified built-in Lua files are replaced by verified release files and retained in the full backup. A damaged installed manifest no longer blocks repair. Stable v0.7.0 and older updaters still reject modified built-in Lua files.
 
 The backup is the previous installation, not a permanent archive. Save any built-in code edits you want to keep before another update replaces that backup. Keep personal achievements in `custom_achievements.lua`.
 
@@ -38,7 +38,7 @@ The install ZIP and each managed plugin file are checked against SHA-256 digests
 
 The previous plugin directory is retained as `koreader/plugins/.kindlevel-backup`. If activation fails, the updater attempts to restore it. Staging uses a separate folder on the same filesystem. The directory swap requires two renames. If a power loss leaves the main folder missing, the independent recovery plugin can install the latest release over Wi-Fi or restore the backup offline. On older installations without recovery, exit KOReader and rename `.kindlevel-backup` back to `kindlevel.koplugin` over USB.
 
-Keep Wi-Fi connected during the download. The development updater retries transient download failures once, starts failed downloads afresh, and distinguishes DNS, timeout and TLS failures. If HTTPS verification fails, check the Kindle's date and time. The updater supports direct HTTPS connections; custom HTTP proxies are not supported.
+Keep Wi-Fi connected during the download. The updater retries transient download failures once, starts failed downloads afresh, and distinguishes DNS, timeout and TLS failures. If HTTPS verification fails, check the Kindle's date and time. The updater supports direct HTTPS connections; custom HTTP proxies are not supported.
 
 ## Building releases
 

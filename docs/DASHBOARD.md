@@ -1,6 +1,6 @@
 # Web dashboard and Kindle connection
 
-Kindlevel's dashboard uses Go, Svelte and SQLite in one Docker container. It supports owner login, Kindle pairing, and uploads of books, reading statistics and achievements. Node is used only during the build. The v0.7.0 plugin syncs automatically over an existing Wi-Fi connection; v0.6.0 uses **Sync now**.
+Kindlevel's dashboard uses Go, Svelte and SQLite in one Docker container. Version 1.0.0 brings the Pocket Ledger design, owner login, Kindle pairing, and uploads of books, reading statistics and achievements. Node is used only during the build. The plugin syncs automatically over an existing Wi-Fi connection.
 
 ## Start and create your account
 
@@ -17,7 +17,7 @@ The `kindlevel-data` volume holds the account, device registrations, goals and r
 
 ## Pair your Kindle
 
-1. Install **v0.7.0 or newer** for automatic sync. v0.6.0 supports manual sync and public HTTP after approval; v0.5.0 does not contain sync. Use the release ZIP or build with `python3 scripts/build.py`, fully exit KOReader, then copy the contents of the ZIP's `kindlevel.koplugin` folder into the existing `koreader/plugins/kindlevel.koplugin/` over USB, replacing shipped files. Keep personal files. Start KOReader again and confirm the new version in Kindlevel's Settings footer.
+1. Install **v1.0.0** from the release ZIP or build with `python3 scripts/build.py`. Fully exit KOReader, then copy both `kindlevel.koplugin` and `kindlevel-recovery.koplugin` from the ZIP into `koreader/plugins/`, replacing shipped files while keeping personal files. Start KOReader again and confirm the version in Kindlevel's Settings footer. Automatic sync is also supported by v0.7.0; v0.6.0 uses manual sync.
 2. In the web dashboard, open **Your Kindle → Pair a Kindle**. The code expires after ten minutes and can be used once.
 3. On Kindle, open **Kindlevel → Settings → Web dashboard → Connect to server**, or **Tools → Kindlevel web dashboard**.
 4. Enter the reachable server address, pairing code and Kindle name.
@@ -59,7 +59,7 @@ Sync saves the open book's position and flushes native statistics without closin
 
 Available from v0.7.0.
 
-Automatic sync defaults to **on** for new and existing paired devices. Open **Kindlevel → Settings → Web dashboard → Automatic sync** to turn it off; **Sync now** remains available either way. No server update or new pairing is needed.
+Automatic sync defaults to **on** for new and existing paired devices. In v1.0.0, open **Kindlevel → Settings → Web dashboard → Connection settings → Automatic sync** to turn it off; **Sync now** remains available either way. No server update or new pairing is needed.
 
 - Sync starts shortly after KOReader reports a Wi-Fi connection, including startup/resume with Wi-Fi already connected, and repeats every **five minutes** while awake and connected. Repeated connection events are throttled to at most one attempt per minute.
 - Uploads run in the background without progress dialogs or success notifications. You can keep turning pages. The plugin never switches Wi-Fi on or off for automatic sync, and local servers work without Internet access.

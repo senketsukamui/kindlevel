@@ -16,7 +16,7 @@ The plugin works offline. KOReader handles document rendering, saved positions a
 - EPUB, PDF, MOBI, FB2, TXT and other formats supported by KOReader.
 - Optional Go/Svelte dashboard with device pairing and automatic statistics sync over Wi-Fi.
 
-**Release status:** v0.7.0 adds automatic background statistics sync over Wi-Fi, with quiet retries and a saved on/off toggle. Ongoing development is on [`develop`](https://github.com/senketsukamui/kindlevel/tree/develop). XP is reserved for future progression.
+**Release status:** v1.0.0 brings the Pocket Ledger design to the plugin and dashboard, with a separate recovery updater for Wi-Fi repair. Automatic statistics sync remains available. Ongoing development is on [`develop`](https://github.com/senketsukamui/kindlevel/tree/develop). XP, levels and character outfits are planned.
 
 ## Install on Kindle
 
@@ -24,18 +24,18 @@ Requires a jailbroken Kindle with KOReader. Keep its **Reading statistics** plug
 
 1. Download the plugin release ZIP, or build a source checkout with `python3 scripts/build.py`.
 2. **Fully exit KOReader**, then connect the Kindle over USB.
-3. Copy the contents of `kindlevel.koplugin` into `koreader/plugins/kindlevel.koplugin/`, replacing shipped files while keeping personal files. Avoid nesting another plugin folder inside it.
+3. Copy both `kindlevel.koplugin` and `kindlevel-recovery.koplugin` from the ZIP into `koreader/plugins/`. For an existing installation, replace shipped files inside those folders while keeping personal files. Avoid nesting another plugin folder inside either one.
 4. Start KOReader and open **Tools → Kindlevel**. Check the version in Kindlevel's Settings footer.
 
-Development builds also include **`kindlevel-recovery.koplugin`**: copy this folder beside the main plugin in `koreader/plugins/`. It provides a separate **Tools → Kindlevel recovery** menu for Wi-Fi repair and offline rollback, even if Kindlevel cannot load. See [updates and recovery](docs/UPDATES.md).
+Keep both plugins enabled. **Tools → Kindlevel recovery** provides Wi-Fi repair and offline rollback, even if the main plugin cannot load. If an older updater rejects modified Lua files, install both folders over USB once. See [updates and recovery](docs/UPDATES.md).
 
-Three original sample books are included. Select your library through **Settings → Choose books folder**. For automatic opening, enable **Show home on file browser entry** and set KOReader's **Start with** option to **file browser**.
+Three original sample books are included. Select your library through **Settings → Library → Choose books folder**. For automatic opening, turn **Settings → Reading preferences → Startup home** on and set KOReader's **Start with** option to **file browser**.
 
 Kindlevel reads native statistics through read-only connections. Its goals and unlocks are stored separately; reading positions stay in KOReader's document settings.
 
 ## Self-host the dashboard
 
-On a VPS with Docker, Compose and Python 3, from a v0.7.0 source checkout:
+On a VPS with Docker, Compose and Python 3, from a v1.0.0 source checkout:
 
 ```sh
 sudo ./scripts/setup-server.sh http://YOUR_VPS_IP
@@ -49,7 +49,7 @@ Sync currently uploads book metadata, statistics and achievements. Book files, c
 
 ## Updates and development
 
-From v0.5.0, **Settings → Check for updates** installs newer stable GitHub releases over Wi-Fi. Older versions need one USB upgrade. [Update guide](docs/UPDATES.md).
+From v0.5.0, the plugin can install newer stable GitHub releases over Wi-Fi. In v1.0.0, use **Settings → Updates & recovery → Check for updates**. Older versions need one USB upgrade. [Update guide](docs/UPDATES.md).
 
 Preview the actual plugin with Python 3.12+ and Docker:
 
