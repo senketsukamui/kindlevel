@@ -5,6 +5,7 @@
   import Devices from './Devices.svelte';
   import Cover from './Cover.svelte';
   import Calendar from './Calendar.svelte';
+  import WeeklyChart from './WeeklyChart.svelte';
   import {
     dailyActivity,
     streak,
@@ -13,6 +14,7 @@
     formatDate,
     shiftDate,
     yearWeeks,
+    parseDate,
   } from './reading.js';
 
   let data = $state(null);
@@ -21,6 +23,8 @@
   let error = $state('');
   let loading = $state(true);
   let page = $state('home');
+  let activityView = $state('week');
+  let weekOffset = $state(0);
   let query = $state('');
   let bookFilter = $state('all');
   let badgeFilter = $state('all');
@@ -36,27 +40,30 @@
   let message = $state('');
   let dialog = $state();
   const tabs = [
-    { id: 'home', label: 'Reading home', icon: 'book' },
-    { id: 'library', label: 'Your library', icon: 'shelf' },
-    { id: 'activity', label: 'Reading activity', icon: 'calendar' },
-    { id: 'achievements', label: 'Achievements', icon: 'badge' },
+    { id: 'home', label: 'Reading home', short: 'Home', mobile: 'Home', icon: 'home' },
+    { id: 'library', label: 'Your library', short: 'Library', mobile: 'Library', icon: 'book' },
+    {
+      id: 'activity',
+      label: 'Reading activity',
+      short: 'Activity',
+      mobile: 'Activity',
+      icon: 'chart',
+    },
+    {
+      id: 'achievements',
+      label: 'Achievements',
+      short: 'Achievements',
+      mobile: 'Badges',
+      icon: 'badge',
+    },
     { id: 'devices', label: 'Your Kindle', icon: 'device' },
   ];
   const titles = {
-    devices: [
-      'Your reading life, connected.',
-      'A little bridge between your Kindle and your reading home.',
-    ],
-    home: ['A little time, a few pages.', 'Make yourself at home. Your reading life is here.'],
-    library: [
-      'Good company, on every shelf.',
-      'The books you’ve finished, found, and fallen into.',
-    ],
-    activity: ['Every page leaves a trace.', 'Small reading moments, gathered over time.'],
-    achievements: [
-      'Little milestones. Lasting habits.',
-      'A collection of moments worth remembering.',
-    ],
+    devices: ['Your Kindle', 'A bridge between your reading spaces.'],
+    home: ['Your reading, at a glance.', ''],
+    library: ['Your library', 'Stories on your device, in one quiet place.'],
+    activity: ['Time between the pages', 'Every small reading moment counts.'],
+    achievements: ['Little milestones', 'A collection of the moments that made you a reader.'],
   };
   let days = $derived(dailyActivity(data?.activity ?? []));
   let today = $derived(days.get(data?.today) ?? { seconds: 0, pages: 0 });
@@ -66,6 +73,7 @@
       data?.books[0],
   );
   let currentStreak = $derived(data ? streak(days, data.today) : 0);
+  let sourceDevice = $derived(data?.devices.find((device) => device.id === data.source_device));
   let year = $derived(Number(data?.today.slice(0, 4) ?? new Date().getFullYear()));
   let yearActivity = $derived(
     data?.activity.filter((item) => item.date.startsWith(String(year))) ?? [],
@@ -74,9 +82,6 @@
   let totalPages = $derived(yearActivity.reduce((sum, item) => sum + item.pages, 0));
   let finished = $derived(
     data?.books.filter((book) => book.finished?.startsWith(String(year))).length ?? 0,
-  );
-  let recent = $derived(
-    Array.from({ length: 7 }, (_, i) => shiftDate(data?.today ?? '2026-01-01', i - 6)),
   );
   let earned = $derived(data?.achievements.filter((badge) => badge.unlocked).length ?? 0);
   let filteredBooks = $derived(
@@ -97,6 +102,52 @@
       .filter((item) => item.unlocked)
       .sort((a, b) => b.unlocked.localeCompare(a.unlocked))[0],
   );
+  let featuredBadge = $derived(
+    data?.achievements
+      .filter((badge) => !badge.unlocked)
+      .sort((a, b) => b.progress / Math.max(1, b.target) - a.progress / Math.max(1, a.target))[0] ??
+      latestBadge,
+  );
+  let weekStart = $derived(
+    data
+      ? shiftDate(data.today, -((parseDate(data.today).getUTCDay() + 6) % 7) + weekOffset * 7)
+      : '2026-01-01',
+  );
+  let weekDates = $derived(Array.from({ length: 7 }, (_, i) => shiftDate(weekStart, i)));
+  let weekLabel = $derived(
+    `${formatDate(weekStart, { day: 'numeric', month: 'short' })} – ${formatDate(weekDates[6], { day: 'numeric', month: 'short', year: 'numeric' })}`,
+  );
+  let weekSeconds = $derived(weekDates.reduce((n, d) => n + (days.get(d)?.seconds ?? 0), 0));
+  let weekPages = $derived(weekDates.reduce((n, d) => n + (days.get(d)?.pages ?? 0), 0));
+  let weekActive = $derived(
+    weekDates.filter((d) => d <= data?.today && (days.get(d)?.seconds ?? 0) > 0).length,
+  );
+  let weekElapsed = $derived(weekDates.filter((d) => d <= data?.today).length);
+  let yearMonths = $derived(
+    Array.from({ length: 12 }, (_, i) => ({
+      name: new Date(Date.UTC(year, i, 1)).toLocaleDateString('en', {
+        month: 'short',
+        timeZone: 'UTC',
+      }),
+      column:
+        yearWeeks(year).findIndex((week) =>
+          week.includes(`${year}-${String(i + 1).padStart(2, '0')}-01`),
+        ) + 1,
+    })),
+  );
+  function badgeSource(icon) {
+    const match = {
+      book: 'book-open',
+      pages: 'book-open',
+      calendar: 'calendar',
+      clock: 'clock',
+      moon: 'moon',
+      sun: 'sun',
+      spark: 'sun',
+      stack: 'book-open',
+    }[icon];
+    return match ? `/assets/ui/${match}.svg` : `/assets/badges/${icon}.svg`;
+  }
   let bookHistory = $derived(
     data?.activity.filter((item) => item.book_id === selectedBook?.id) ?? [],
   );
@@ -166,7 +217,9 @@
     goalOpen = false;
   }
   function navigate(id) {
+    closeDialog();
     page = id;
+    if (id === 'home') weekOffset = 0;
     message = '';
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
@@ -206,210 +259,311 @@
   }
 </script>
 
-<svelte:head><title>Kindlevel · {tabs.find((tab) => tab.id === page)?.label}</title></svelte:head>
+<svelte:head
+  ><title
+    >Kindlevel · {page === 'settings'
+      ? 'Your reading space'
+      : tabs.find((tab) => tab.id === page)?.label}</title
+  ></svelte:head
+>
+
+{#snippet goalStrip()}
+  <div class="goal-strip">
+    <button onclick={editGoals} aria-label="Reading goals" class="goal-metric today-value"
+      ><Icon name="clock" size={28} /><span
+        ><strong>{minutes(today.seconds)} / {data.goals.daily_minutes}</strong><small
+          >minutes today</small
+        ></span
+      ></button
+    >
+    <div class="goal-metric">
+      <Icon name="sun" size={28} /><span
+        ><strong>{currentStreak}</strong><small>day streak</small></span
+      >
+    </div>
+    <div class="mobile-daily-track progress-track">
+      <span
+        style:width="{Math.min(
+          100,
+          (today.seconds / Math.max(1, data.goals.daily_minutes * 60)) * 100,
+        )}%"
+      ></span>
+    </div>
+    <button onclick={editGoals} class="goal-metric"
+      ><Icon name="book" size={28} /><span
+        ><strong
+          >{finished}{data.goals.yearly_books > 0 ? ` / ${data.goals.yearly_books}` : ''}</strong
+        ><small>books this year</small></span
+      ></button
+    >
+  </div>
+{/snippet}
 
 {#if auth && !auth.authenticated}
   <Auth initialized={auth.initialized} onauthenticated={load} />
 {:else}
   <div class="app-shell">
-    <aside class="sidebar">
+    <header class="site-header">
       <a
         class="brand"
         href="#home"
         onclick={() => navigate('home')}
-        aria-label="Kindlevel reading home"
-        ><span class="brand-mark"><Icon name="book" size={22} /></span><span
-          >kindlevel<span class="brand-subtitle">YOUR READING HOME</span></span
-        ></a
+        aria-label="Kindlevel reading home"><Icon name="book" size={28} /><span>kindlevel</span></a
       >
-      <nav aria-label="Main navigation">
-        {#each tabs as tab}<button
+      <nav class="desktop-nav" aria-label="Main navigation">
+        {#each tabs.filter((tab) => tab.id !== 'devices') as tab}<button
             class:active={page === tab.id}
             aria-current={page === tab.id ? 'page' : undefined}
-            onclick={() => navigate(tab.id)}
-            ><Icon name={tab.icon} size={19} /><span>{tab.label}</span
-            >{#if tab.id === 'achievements' && data}<span class="nav-count">{earned}</span
-              >{/if}</button
+            aria-label={tab.label}
+            onclick={() => navigate(tab.id)}>{tab.short}</button
           >{/each}
       </nav>
-      <div class="sidebar-note">
-        <Icon name="leaf" size={24} />
-        <p>A few pages at a time.<br />A little world of your own.</p>
+      <div class="header-tools">
+        <button
+          class="connection-status"
+          aria-label="Your Kindle"
+          onclick={() => navigate('devices')}
+          ><Icon name="device" size={20} /><span
+            >{data?.source_device
+              ? sourceDevice?.revoked
+                ? 'Kindle · Disconnected'
+                : 'Kindle · Synced'
+              : data?.demo
+                ? 'Demo · Your Kindle'
+                : 'Connect Kindle'}</span
+          ></button
+        >
+        <button
+          class="icon-button"
+          class:active={page === 'settings'}
+          aria-label="Your reading space settings"
+          onclick={() => navigate('settings')}><Icon name="user" size={24} /></button
+        >
       </div>
-      <button class="device-note" onclick={() => navigate('devices')}>
-        <span class="device-icon"><Icon name="device" size={19} /></span>
-        <div>
-          <strong
-            >{data?.devices.find((device) => device.id === data.source_device)?.name ??
-              'Connect your Kindle'}</strong
-          ><span
-            >{data?.source_device ? 'Reading history synced' : 'Pair once. Read anywhere.'}</span
-          >
-        </div>
-      </button>
-      <span class="sidebar-footer">Self-hosted. Yours to keep.</span>
-    </aside>
-
-    <main>
-      <header class="topbar">
-        <div class="breadcrumb">
-          Your reading space <span>/</span>
-          {tabs.find((tab) => tab.id === page)?.label}
-        </div>
-        <div class="topbar-actions">
-          <span class="demo-pill"
-            ><i></i>{data?.demo ? 'Demo reading history' : 'Kindle reading history'}</span
-          ><button class="text-button" onclick={load} disabled={loading}>Refresh</button><button
-            class="text-button"
-            onclick={logout}>Sign out</button
-          >
-        </div>
-      </header>
+    </header>
+    <main id="main-content" class:home-page={page === 'home'}>
       {#if loading && !data}<div class="state-panel" role="status">
-          <Icon name="book" size={35} />
-          <h1>Opening your reading home…</h1>
+          <Icon name="book" size={64} />
+          <h1>Gathering your reading moments…</h1>
+          <p>Loading history from your server.</p>
         </div>
       {:else if error}<div class="state-panel" role="alert">
+          <Icon name="device" size={64} />
           <h1>A little pause.</h1>
           <p>{error}</p>
           <button class="primary-button" onclick={load}>Try again</button>
         </div>
       {:else if data}
-        <div class="page-heading">
-          <div>
-            <span class="eyebrow"
-              >{page === 'home'
-                ? formatDate(data.today, { weekday: 'long', month: 'long', day: 'numeric' })
-                : 'YOUR READING LIFE'}</span
-            >
-            <h1>{titles[page][0]}</h1>
-            <p>{titles[page][1]}</p>
-          </div>
-          {#if page === 'home' || page === 'activity'}<button
-              class="outline-button goal-action"
-              onclick={editGoals}><Icon name="target" size={17} /> Reading goals</button
-            >{/if}
-        </div>
         {#if message}<div class="saved-message" role="status">
-            <Icon name="check" size={17} />{message}<button
+            <Icon name="check" size={20} />{message}<button
+              class="icon-button"
               aria-label="Dismiss message"
               onclick={() => (message = '')}><Icon name="close" size={16} /></button
             >
           </div>{/if}
-
-        {#if page === 'devices'}
-          <Devices
-            devices={data.devices}
-            serverURL={auth?.server_url ?? ''}
-            sourceDevice={data.source_device ?? ''}
-            onrefresh={load}
-            onselect={viewDevice}
-          />
-        {:else if page === 'home'}
-          <div class="home-top">
-            {#if currentBook}<section class="current-book panel">
-                <div class="current-book-cover"><Cover book={currentBook} /></div>
-                <div class="current-book-info">
-                  <span class="eyebrow">ON YOUR NIGHTSTAND</span>
-                  <h2>{currentBook.title}</h2>
-                  <p class="book-author">{currentBook.author}</p>
-                  <p class="current-book-copy">
-                    There’s a little more of this story waiting for you.
-                  </p>
-                  <div class="book-progress-label">
-                    <span
-                      >{currentBook.progress_known
-                        ? `${currentBook.progress}% of the way`
-                        : 'Reading on your Kindle'}</span
-                    ><span
-                      >{currentBook.progress_known
-                        ? `${Math.round((currentBook.pages * currentBook.progress) / 100)} / ${currentBook.pages}`
-                        : currentBook.pages
-                          ? `${currentBook.pages} pages`
-                          : ''}
-                      pages</span
-                    >
-                  </div>
-                  {#if currentBook.progress_known}<div class="progress-track">
-                      <span style:width="{currentBook.progress}%"></span>
-                    </div>{/if}
-                  <button class="primary-button" onclick={() => (selectedBook = currentBook)}
-                    >A closer look <Icon name="arrow" size={18} /></button
+        <div class="page-heading ledger-heading">
+          <div>
+            <h1>
+              {#if page === 'home'}<span class="desktop-home-title">Your reading, at a glance.</span
+                ><span class="mobile-home-title">A little reading,<br />a little world.</span
+                >{:else}{page === 'settings' ? 'Your reading space' : titles[page][0]}{/if}
+            </h1>
+            <p>
+              {page === 'home'
+                ? formatDate(data.today, {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                  })
+                : page === 'settings'
+                  ? 'The small practical things.'
+                  : titles[page][1]}
+            </p>
+          </div>
+        </div>
+        {#if page === 'home'}
+          {@render goalStrip()}
+          {#if currentBook}<section class="current-book">
+              <div class="current-book-cover"><Cover book={currentBook} /></div>
+              <div class="current-book-info">
+                <span class="eyebrow">CURRENTLY READING</span>
+                <h2>{currentBook.title}</h2>
+                <p class="book-author">{currentBook.author}</p>
+                <div class="book-progress-label">
+                  <span
+                    >{currentBook.progress_known
+                      ? `${currentBook.progress}% read`
+                      : 'Reading on your Kindle'}{currentBook.progress_known && currentBook.pages
+                      ? ` · ${Math.round((currentBook.pages * currentBook.progress) / 100)} / ${currentBook.pages} pages`
+                      : ''}</span
                   >
                 </div>
-              </section>{:else}<section class="panel empty-reading">
-                <Icon name="book" size={32} />
-                <h2>Your next chapter is waiting.</h2>
-                <p>Open a book in KOReader, then choose Sync now in Kindlevel.</p>
-                <button class="outline-button" onclick={() => navigate('devices')}
-                  >Your Kindle</button
+                {#if currentBook.progress_known}<div class="progress-track">
+                    <span style:width="{currentBook.progress}%"></span>
+                  </div>{/if}
+                <button class="primary-button" onclick={() => (selectedBook = currentBook)}
+                  >View book details</button
                 >
-              </section>{/if}
-            <section class="today-card panel">
-              <div class="card-heading">
-                <span class="eyebrow">A LITTLE EVERY DAY</span><Icon name="sun" size={21} />
               </div>
-              <div class="today-value">
-                {minutes(today.seconds)}<span> / {data.goals.daily_minutes} min</span>
-              </div>
+            </section>{:else}<section class="state-panel empty-reading">
+              <Icon name="book" size={64} />
+              <h2>Your next chapter starts here.</h2>
               <p>
-                {today.seconds >= data.goals.daily_minutes * 60
-                  ? 'Your daily goal, quietly accomplished.'
-                  : `${Math.max(0, data.goals.daily_minutes - minutes(today.seconds))} more minutes for a little reading moment.`}
+                {data.source_device
+                  ? 'Open a book in KOReader. Your next sync brings its reading history here.'
+                  : 'Connect your Kindle to bring in your books, reading days and achievements.'}
               </p>
-              <div class="progress-track">
-                <span
-                  style:width="{Math.min(
-                    100,
-                    (today.seconds / (data.goals.daily_minutes * 60)) * 100,
-                  )}%"
-                ></span>
-              </div>
-              <div class="today-bottom">
-                <span><Icon name="leaf" size={18} />{currentStreak}-day reading streak</span><button
-                  class="text-button"
-                  onclick={editGoals}>Adjust goal</button
-                >
-              </div>
-            </section>
-          </div>
-          <div class="metrics">
-            <div>
-              <span class="metric-icon"><Icon name="clock" size={21} /></span>
-              <div>
-                <span class="metric-label">Time between the pages</span><strong
-                  >{duration(totalSeconds)}<small>this year</small></strong
-                >
-              </div>
+              <button class="primary-button" onclick={() => navigate('devices')}
+                >Connect your Kindle</button
+              >
+            </section>{/if}
+          <section class="week-section">
+            <div class="section-heading">
+              <h2 class="eyebrow">READING THIS WEEK</h2>
+              <span class="mono">{weekLabel}</span>
             </div>
-            <div>
-              <span class="metric-icon"><Icon name="book" size={21} /></span>
-              <div>
-                <span class="metric-label">Pages turned</span><strong
-                  >{totalPages.toLocaleString()}<small>this year</small></strong
-                >
-              </div>
-            </div>
-            <button onclick={editGoals}
-              ><span class="metric-icon"><Icon name="shelf" size={21} /></span>
-              <div>
-                <span class="metric-label">Your {year} reading goal</span><strong
-                  >{finished}<span class="metric-divider"> / {data.goals.yearly_books}</span><small
-                    >books finished</small
-                  ></strong
-                >
-              </div>
-              <span
-                class="mini-progress"
-                style:background="conic-gradient(var(--olive) {Math.min(
-                  100,
-                  (finished / Math.max(1, data.goals.yearly_books)) * 100,
-                )}%, var(--line) 0)"><span></span></span
-              ></button
+            <WeeklyChart
+              dates={weekDates}
+              {days}
+              today={data.today}
+              onday={(date) => (selectedDay = date)}
+            />
+          </section>
+          <section class="next-milestone">
+            <span class="badge-frame"
+              >{#if featuredBadge}<img src={badgeSource(featuredBadge.icon)} alt="" />{:else}<Icon
+                  name="badge"
+                  size={28}
+                />{/if}</span
             >
+            <div>
+              <h2>{featuredBadge?.title ?? 'One chapter at a time'}</h2>
+              <p>
+                {featuredBadge?.description ??
+                  'Your first milestone is still to come. Keep a little time for reading.'}
+              </p>
+            </div>
+            <button class="text-button" onclick={() => navigate('achievements')}
+              >All achievements</button
+            >
+          </section>
+          <button class="outline-button mobile-activity-link" onclick={() => navigate('activity')}
+            >Your reading activity</button
+          >
+        {:else if page === 'library'}
+          <div class="library-toolbar">
+            <label class="search-box"
+              ><Icon name="search" size={20} /><input
+                aria-label="Search your library"
+                bind:value={query}
+                placeholder="Title or author"
+              /></label
+            >
+            <div class="filter-tabs" aria-label="Filter books">
+              {#each [['all', 'All'], ['reading', 'Reading'], ['finished', 'Finished'], ['unread', 'Unread']] as [id, label]}<button
+                  class:active={bookFilter === id}
+                  aria-pressed={bookFilter === id}
+                  onclick={() => (bookFilter = id)}>{label}</button
+                >{/each}
+            </div>
           </div>
-          <div class="home-bottom">
-            <section class="panel calendar-panel">
+          <p class="eyebrow list-count">
+            {filteredBooks.length}
+            {filteredBooks.length === 1 ? 'BOOK' : 'BOOKS'} · {data.demo
+              ? 'DEMO METADATA'
+              : 'DEVICE METADATA'}
+          </p>
+          <div class="library-grid">
+            {#each filteredBooks as book}<button
+                class="library-book"
+                onclick={() => (selectedBook = book)}
+                ><div class="library-cover"><Cover {book} compact /></div>
+                <div class="library-book-info">
+                  <h2>{book.title}</h2>
+                  <p>{book.author} · {book.format}</p>
+                  <span class="book-status mono"
+                    >{book.status === 'finished'
+                      ? 'Finished'
+                      : book.status === 'reading'
+                        ? book.progress_known
+                          ? `${book.progress}% read`
+                          : 'Reading'
+                        : 'Not started'}</span
+                  >
+                </div>
+                <span class="row-action">Details <Icon name="right" size={18} /></span></button
+              >{/each}
+          </div>
+          {#if !filteredBooks.length}<div class="state-panel">
+              <Icon name="search" size={64} />
+              <h2>No books in this corner.</h2>
+              <p>Try another title or clear your filters.</p>
+              <button
+                class="outline-button"
+                onclick={() => {
+                  query = '';
+                  bookFilter = 'all';
+                }}>Clear search and filters</button
+              >
+            </div>{/if}
+          <p class="detail-footnote">
+            Book files stay on your Kindle. This dashboard shows synced reading metadata.
+          </p>
+        {:else if page === 'activity'}
+          <div class="filter-tabs activity-tabs" aria-label="Reading activity period">
+            {#each [['week', 'Week'], ['month', 'Month'], ['year', 'Year']] as [id, label]}<button
+                class:active={activityView === id}
+                aria-pressed={activityView === id}
+                onclick={() => (activityView = id)}>{label}</button
+              >{/each}
+          </div>
+          {#if activityView === 'week'}
+            <div class="goal-strip">
+              <div class="goal-metric">
+                <Icon name="clock" size={28} /><span
+                  ><strong>{duration(weekSeconds)}</strong><small>this week</small></span
+                >
+              </div>
+              <div class="goal-metric">
+                <Icon name="calendar" size={28} /><span
+                  ><strong>{weekActive} / {weekElapsed}</strong><small>reading days</small></span
+                >
+              </div>
+              <div class="goal-metric">
+                <Icon name="book" size={28} /><span
+                  ><strong>{weekPages}</strong><small>pages read</small></span
+                >
+              </div>
+            </div>
+            <div class="period-controls">
+              <button
+                class="outline-button"
+                aria-label="Previous week"
+                onclick={() => (weekOffset -= 1)}><Icon name="left" size={20} />Previous</button
+              >
+              <h2>{weekLabel}</h2>
+              <button
+                class="outline-button"
+                aria-label="Next week"
+                disabled={weekOffset === 0}
+                onclick={() => (weekOffset = Math.min(0, weekOffset + 1))}
+                >Next<Icon name="right" size={20} /></button
+              >
+            </div>
+            <WeeklyChart
+              dates={weekDates}
+              {days}
+              today={data.today}
+              onday={(date) => (selectedDay = date)}
+            />
+            <div class="activity-links">
+              <button class="outline-button" onclick={() => (activityView = 'month')}
+                >Open monthly calendar</button
+              ><button class="text-button" onclick={editGoals}>Reading goals</button>
+            </div>
+          {:else if activityView === 'month'}
+            <section class="activity-calendar">
               <Calendar
                 bind:month
                 books={data.books}
@@ -420,193 +574,91 @@
                 onbook={(book) => (selectedBook = book)}
               />
             </section>
-            <div class="home-side">
-              <section class="panel rhythm-card">
-                <div class="section-heading">
-                  <h2>Your daily rhythm</h2>
-                  <Icon name="leaf" size={19} />
-                </div>
-                <p>Small moments add up.</p>
-                <div class="rhythm-chart">
-                  {#each recent as date}<button
-                      class:today-column={date === data.today}
-                      aria-label="{formatDate(date)}: {minutes(
-                        days.get(date)?.seconds ?? 0,
-                      )} minutes"
-                      onclick={() => (selectedDay = date)}
-                      ><span class="rhythm-value">{minutes(days.get(date)?.seconds ?? 0)}</span
-                      ><span
-                        class="rhythm-bar"
-                        style:height="{Math.max(
-                          4,
-                          Math.min(104, (days.get(date)?.seconds ?? 0) / 45),
-                        )}px"
-                      ></span><span class="rhythm-day"
-                        >{formatDate(date, { weekday: 'short' }).slice(0, 1)}</span
-                      ></button
+          {:else}
+            <div class="goal-strip">
+              <div class="goal-metric">
+                <Icon name="clock" size={28} /><span
+                  ><strong>{duration(totalSeconds)}</strong><small>reading time</small></span
+                >
+              </div>
+              <div class="goal-metric">
+                <Icon name="book" size={28} /><span
+                  ><strong>{totalPages.toLocaleString()}</strong><small>pages read</small></span
+                >
+              </div>
+              <button class="goal-metric" onclick={editGoals}
+                ><Icon name="badge" size={28} /><span
+                  ><strong
+                    >{finished}{data.goals.yearly_books > 0
+                      ? ` / ${data.goals.yearly_books}`
+                      : ''}</strong
+                  ><small>books finished</small></span
+                ></button
+              >
+            </div>
+            <section class="year-panel">
+              <h2 class="visually-hidden">{year} reading days</h2>
+              <div class="heatmap-scroll">
+                <div class="heatmap-months" style:--weeks={yearWeeks(year).length}>
+                  {#each yearMonths as item}<span style:grid-column={item.column}>{item.name}</span
                     >{/each}
                 </div>
-                <div class="rhythm-total">
-                  <strong
-                    >{duration(
-                      recent.reduce((sum, date) => sum + (days.get(date)?.seconds ?? 0), 0),
-                    )}</strong
-                  ><span>over the last seven days</span>
+                <div class="heatmap">
+                  {#each yearWeeks(year) as week}<div class="heatmap-week">
+                      {#each week as date}<button
+                          class="heatmap-cell heat-{level(date)}"
+                          class:hidden-cell={!date.startsWith(String(year))}
+                          class:future={date > data.today}
+                          disabled={!date.startsWith(String(year)) || date > data.today}
+                          title="{formatDate(date)} · {minutes(days.get(date)?.seconds ?? 0)} min"
+                          aria-label="{formatDate(date)}: {minutes(
+                            days.get(date)?.seconds ?? 0,
+                          )} minutes"
+                          onclick={() => (selectedDay = date)}
+                        ></button>{/each}
+                    </div>{/each}
                 </div>
-              </section>
-              <section class="panel recent-badge">
-                <div class="section-heading">
-                  <h2>A small milestone</h2>
-                  <Icon name="badge" size={18} />
-                </div>
-                {#if latestBadge}<button
-                    class="featured-badge"
-                    onclick={() => (selectedBadge = latestBadge)}
-                    ><div class="badge-frame">
-                      <img src="/assets/badges/{latestBadge.icon}.svg" alt="" />
-                    </div>
-                    <strong>{latestBadge.title}</strong><span>{latestBadge.description}</span
-                    ></button
-                  >{:else}<p class="no-badges">
-                    Your first milestone is still to come. Keep a little time for reading.
-                  </p>{/if}<button
-                  class="text-button badge-link"
-                  onclick={() => navigate('achievements')}
-                  >Explore your achievements <Icon name="arrow" size={16} /></button
+              </div>
+              <div class="heatmap-footer">
+                <span
+                  >Less {#each [0, 1, 2, 3, 4] as value}<i class="heat-{value}"></i>{/each}More ·
+                  Future days are blank</span
                 >
-              </section>
-            </div>
-          </div>
-        {:else if page === 'library'}
-          <div class="library-toolbar">
-            <div class="filter-tabs" aria-label="Filter books">
-              {#each [['all', 'All books'], ['reading', 'Reading'], ['finished', 'Finished'], ['unread', 'Waiting']] as [id, label]}<button
-                  class:active={bookFilter === id}
-                  aria-pressed={bookFilter === id}
-                  onclick={() => (bookFilter = id)}
-                  >{label}<span
-                    >{id === 'all'
-                      ? data.books.length
-                      : data.books.filter((book) => book.status === id).length}</span
-                  ></button
-                >{/each}
-            </div>
-            <label class="search-box"
-              ><Icon name="search" size={18} /><input
-                aria-label="Search your library"
-                bind:value={query}
-                placeholder="Find a book…"
-              /></label
-            >
-          </div>
-          <div class="library-grid">
-            {#each filteredBooks as book}<button
-                class="library-book"
-                onclick={() => (selectedBook = book)}
-                ><div class="library-cover"><Cover {book} /></div>
-                <div class="library-book-meta">
-                  <span class="format-label">{book.format}</span><span
-                    class="book-status"
-                    class:finished={book.status === 'finished'}
-                    >{book.status === 'finished'
-                      ? 'Finished'
-                      : book.status === 'reading'
-                        ? book.progress_known
-                          ? `${book.progress}% read`
-                          : 'Reading'
-                        : 'Waiting for you'}</span
-                  >
-                </div>
-                <h2>{book.title}</h2>
-                <p>{book.author}</p>
-                {#if book.status === 'reading' && book.progress_known}<div class="progress-track">
-                    <span style:width="{book.progress}%"></span>
-                  </div>{/if}</button
-              >{/each}
-          </div>
-          {#if !filteredBooks.length}<div class="state-panel">
-              <Icon name="search" size={28} />
-              <h2>No books on this shelf.</h2>
-              <p>Try another title or filter.</p>
-              <button
-                class="outline-button"
-                onclick={() => {
-                  query = '';
-                  bookFilter = 'all';
-                }}>Show all books</button
-              >
-            </div>{/if}
-        {:else if page === 'activity'}
-          <section class="panel year-panel">
-            <div class="section-heading">
-              <div>
-                <span class="eyebrow">A YEAR IN LITTLE MOMENTS</span>
-                <h2>Your {year} reading garden</h2>
               </div>
-              <span class="activity-days"
-                >{[...days.keys()].filter((date) => date.startsWith(String(year))).length} days with a
-                book</span
-              >
-            </div>
-            <div class="heatmap-scroll">
-              <div class="heatmap">
-                <div class="heatmap-day-labels">
-                  <span>Mon</span><span>Wed</span><span>Fri</span>
-                </div>
-                {#each yearWeeks(year) as week}<div class="heatmap-week">
-                    {#each week as date}<button
-                        class="heatmap-cell heat-{level(date)}"
-                        class:hidden-cell={!date.startsWith(String(year))}
-                        class:future={date > data.today}
-                        disabled={!date.startsWith(String(year)) || date > data.today}
-                        title="{formatDate(date)} · {minutes(days.get(date)?.seconds ?? 0)} min"
-                        aria-label="{formatDate(date)}: {minutes(
-                          days.get(date)?.seconds ?? 0,
-                        )} minutes"
-                        onclick={() => (selectedDay = date)}
-                      ></button>{/each}
-                  </div>{/each}
+            </section>
+            <section class="year-goal">
+              <h2>Your {year} reading goal</h2>
+              <p>
+                {data.goals.yearly_books > 0
+                  ? `${finished} of ${data.goals.yearly_books} books finished. There is room for another story.`
+                  : `${finished} books finished this year. Your yearly goal is off.`}
+              </p>
+              {#if data.goals.yearly_books > 0}<div class="progress-track">
+                  <span
+                    style:width="{Math.min(
+                      100,
+                      (finished / Math.max(1, data.goals.yearly_books)) * 100,
+                    )}%"
+                  ></span>
+                </div>{/if}
+              <div class="activity-links">
+                <button class="outline-button" onclick={editGoals}>Adjust goals</button><button
+                  class="text-button"
+                  onclick={() => {
+                    bookFilter = 'finished';
+                    navigate('library');
+                  }}>View finished books</button
+                >
               </div>
-              <div class="heatmap-months">
-                {#each ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as name}<span
-                    >{name}</span
-                  >{/each}
-              </div>
-            </div>
-            <div class="heatmap-footer">
-              <span>{currentStreak} days in your current streak</span><span
-                >Less {#each [0, 1, 2, 3, 4] as value}<i class="heat-{value}"></i>{/each} More</span
-              >
-            </div>
-          </section>
-          <section class="panel activity-calendar">
-            <Calendar
-              bind:month
-              books={data.books}
-              activity={data.activity}
-              {days}
-              today={data.today}
-              onday={(date) => (selectedDay = date)}
-              onbook={(book) => (selectedBook = book)}
-            />
-          </section>
+            </section>
+          {/if}
         {:else if page === 'achievements'}
-          <section class="achievement-summary">
-            <span class="large-badge-mark"><Icon name="badge" size={30} /></span>
-            <div>
-              <strong>{earned}<span> / {data.achievements.length}</span></strong>
-              <p>moments collected on your reading journey</p>
-            </div>
-            <div class="achievement-summary-progress">
-              <div class="progress-track">
-                <span style:width="{(earned / Math.max(1, data.achievements.length)) * 100}%"
-                ></span>
-              </div>
-              <span>A little progress, one page at a time.</span>
-            </div>
-          </section>
+          <div class="achievement-summary">
+            <strong>{earned} / {data.achievements.length}</strong><span>achievements earned</span
+            ><span class="badge-frame"><Icon name="badge" size={28} /></span>
+          </div>
           <div class="filter-tabs badge-filters" aria-label="Filter achievements">
-            {#each [['all', 'All achievements'], ['earned', 'Collected'], ['locked', 'Still to discover']] as [id, label]}<button
+            {#each [['all', 'All'], ['earned', 'Earned'], ['locked', 'Locked']] as [id, label]}<button
                 class:active={badgeFilter === id}
                 aria-pressed={badgeFilter === id}
                 onclick={() => (badgeFilter = id)}>{label}</button
@@ -614,36 +666,102 @@
           </div>
           <div class="achievement-grid">
             {#each filteredBadges as badge}<button
-                class="achievement-card panel"
+                class="achievement-card"
                 class:locked={!badge.unlocked}
                 onclick={() => (selectedBadge = badge)}
-                ><div class="badge-frame"><img src="/assets/badges/{badge.icon}.svg" alt="" /></div>
-                <h2>{badge.title}</h2>
-                <p>{badge.description}</p>
-                {#if badge.unlocked}<span class="earned-label"
-                    ><Icon name="check" size={14} /> Collected {formatDate(badge.unlocked, {
-                      month: 'short',
-                      day: 'numeric',
-                    })}</span
-                  >{:else}<div class="badge-card-progress">
+                ><span class="badge-frame"><img src={badgeSource(badge.icon)} alt="" /></span>
+                <div class="achievement-copy">
+                  <h2>{badge.title}</h2>
+                  <p>{badge.description}</p>
+                  {#if badge.unlocked}<span class="earned-label"
+                      >Earned · {formatDate(badge.unlocked, {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}</span
+                    >{:else}<span class="badge-progress-label"
+                      >{badge.progress} / {badge.target} {badge.unit}</span
+                    >
                     <div class="progress-track">
-                      <span style:width="{Math.min(100, (badge.progress / badge.target) * 100)}%"
+                      <span
+                        style:width="{Math.min(
+                          100,
+                          (badge.progress / Math.max(1, badge.target)) * 100,
+                        )}%"
                       ></span>
-                    </div>
-                    <span>{badge.progress} / {badge.target} {badge.unit}</span>
-                  </div>{/if}</button
+                    </div>{/if}
+                </div>
+                <Icon name="right" size={20} /></button
               >{/each}
           </div>
+          {#if !filteredBadges.length}<div class="state-panel">
+              <Icon name="badge" size={64} />
+              <h2>
+                {badgeFilter === 'earned'
+                  ? 'Your first milestone is still to come.'
+                  : 'A quiet moment in your collection.'}
+              </h2>
+              <p>Reading moments and achievements arrive with your next sync.</p>
+            </div>{/if}
+        {:else if page === 'devices'}
+          <Devices
+            devices={data.devices}
+            serverURL={auth?.server_url ?? ''}
+            sourceDevice={data.source_device ?? ''}
+            onrefresh={load}
+            onselect={viewDevice}
+          />
+        {:else if page === 'settings'}
+          <section class="settings-list">
+            <button onclick={editGoals}
+              ><span
+                ><strong>Reading goals</strong><small
+                  >{data.goals.daily_minutes} minutes a day · {data.goals.yearly_books} books in {year}</small
+                ></span
+              ><Icon name="right" /></button
+            ><button onclick={() => navigate('devices')}
+              ><span
+                ><strong>Connected devices</strong><small
+                  >{data.devices.filter((device) => !device.revoked).length} paired devices</small
+                ></span
+              ><Icon name="right" /></button
+            ><button onclick={load} disabled={loading}
+              ><span
+                ><strong>Refresh reading history</strong><small
+                  >{loading
+                    ? 'Gathering your reading moments…'
+                    : 'Bring in the latest data from your server'}</small
+                ></span
+              ><Icon name="refresh" /></button
+            ><button onclick={logout}
+              ><span><strong>Account</strong><small>Sign out of your reading space</small></span
+              ><span>Sign out</span></button
+            >
+          </section>
+          <p class="detail-footnote">
+            Kindlevel · Self-hosted. Your reading data is stored on your server. Book and highlight
+            sync is planned.
+          </p>
         {/if}
         <footer class="page-footer">
-          <span><Icon name="leaf" size={14} /> Every little reading moment counts.</span><span
-            >Kindlevel · {data.demo ? 'Demo workspace' : 'Your reading home'}</span
+          <span
+            >{data.demo ? 'Demo reading history' : 'Kindle reading history'} · Self-hosted. Yours to keep.</span
+          ><button class="text-button" onclick={load} disabled={loading}
+            >{loading ? 'Refreshing…' : 'Refresh'}</button
           >
         </footer>
       {/if}
     </main>
+    <nav class="mobile-nav" aria-label="Mobile navigation">
+      {#each tabs.filter((tab) => tab.id !== 'devices') as tab}<button
+          class:active={page === tab.id}
+          aria-label={tab.label}
+          aria-current={page === tab.id ? 'page' : undefined}
+          onclick={() => navigate(tab.id)}
+          ><Icon name={tab.icon} size={24} /><span>{tab.mobile}</span></button
+        >{/each}
+    </nav>
   </div>
-
   <dialog
     bind:this={dialog}
     oncancel={closeDialog}
@@ -656,8 +774,11 @@
     {#if goalOpen}
       <div class="dialog-content">
         <span class="eyebrow">A PACE THAT FEELS LIKE YOU</span>
-        <h2 id="dialog-title">Your reading goals</h2>
+        <h2 id="dialog-title">Your reading pace</h2>
         <p>Make a little room for reading. You can change these anytime.</p>
+        <p class="goal-note">
+          Dashboard goals are saved here. Set your Kindle goals in the plugin.
+        </p>
         <form onsubmit={saveGoals}>
           <label class="goal-field"
             >Daily reading time<span
@@ -671,7 +792,7 @@
             class="primary-button"
             type="submit"
             disabled={saving}
-            >{saving ? 'Saving…' : 'Save my goals'}<Icon name="check" size={17} /></button
+            >{saving ? 'Saving…' : 'Save goals'}<Icon name="check" size={17} /></button
           >
         </form>
       </div>
@@ -754,7 +875,7 @@
       </div>
     {:else if selectedBadge}
       <div class="dialog-achievement">
-        <div class="badge-frame"><img src="/assets/badges/{selectedBadge.icon}.svg" alt="" /></div>
+        <div class="badge-frame"><img src={badgeSource(selectedBadge.icon)} alt="" /></div>
         <span class="eyebrow"
           >{selectedBadge.unlocked ? 'A MOMENT COLLECTED' : 'STILL TO DISCOVER'}</span
         >

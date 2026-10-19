@@ -7,6 +7,8 @@ __pycache__/
 node_modules/
 server/web/dist/
 server/web/public/assets/badges/
+server/web/public/assets/ui/
+server/web/public/assets/licenses/
 server/data/
 server/kindlevel-server
 .env

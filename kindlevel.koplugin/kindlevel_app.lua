@@ -189,7 +189,10 @@ function Kindlevel:pairDashboard()
             UIManager:close(dialog)
             networkJob(function() return core:pair(address,code,name,allow_http) end,"Connecting your Kindle…",function(result,message,cancelled)
                 if cancelled then return end
-                if result then require("kindlevel_auto_sync"):wake(true) end
+                if result then
+                    require("kindlevel_auto_sync"):wake(true)
+                    if self.home then self.home:rebuild() end
+                end
                 UIManager:show(InfoMessage:new{text=result and "Kindle connected. Reading history will sync automatically while Wi-Fi is connected. You can also choose Sync now in Web dashboard." or message or "Cannot connect to the server."})
             end)
         end
@@ -208,6 +211,7 @@ function Kindlevel:syncDashboard()
         if result then
             local auto=require("kindlevel_auto_sync")
             auto.retry_at=nil;auto.failures=0
+            if self.home then self.home:rebuild() end
             UIManager:show(InfoMessage:new{text=string.format("Reading history synced.\n\n%d books · %d book-days · %d achievements\nOpen or refresh your web dashboard to see it.",result.books or 0,result.activity or 0,result.achievements or 0)})
         else UIManager:show(InfoMessage:new{text=err or "Could not sync. Your pending snapshot is kept for retry."}) end
     end,function() self:prepareDashboardSync() end)

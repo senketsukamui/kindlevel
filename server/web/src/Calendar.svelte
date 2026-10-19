@@ -9,7 +9,6 @@
 <div class="calendar-toolbar">
   <div>
     <h2>{formatDate(`${month}-01`, { month: 'long', year: 'numeric' })}</h2>
-    <p>The books keeping you company.</p>
   </div>
   <div class="month-controls">
     <button
@@ -30,28 +29,34 @@
   {#each weeks as week}
     {@const runs = weekRuns(week, activity, books)}
     {@const lanes = Math.max(2, ...runs.map((run) => run.lane + 1))}
-    <div class="calendar-week" style:min-height="{75 + lanes * 23}px">
+    <div class="calendar-week" style:min-height="{52 + lanes * 22}px">
       {#each week as date}
         {@const record = days.get(date)}
-        <button
+        <div
           class="calendar-day"
           class:outside={!date.startsWith(month)}
           class:is-today={date === today}
-          onclick={() => onday(date)}
-          aria-label="{formatDate(date)}: {minutes(record?.seconds ?? 0)} minutes read"
+          class:future={date > today}
         >
-          <span class="day-number">{Number(date.slice(-2))}</span>
+          <button
+            class="calendar-day-button"
+            disabled={date > today}
+            onclick={() => onday(date)}
+            aria-label="{formatDate(date)}: {minutes(record?.seconds ?? 0)} minutes read"
+          >
+            <span class="day-number">{Number(date.slice(-2))}</span>
+          </button>
           <span class="day-activity"
             ><span class="day-bars"
               >{#each activity.filter((item) => item.date === date) as item}<i
-                  style:height="{Math.min(24, Math.max(3, item.seconds / 150))}px"
+                  style:height="{Math.min(12, Math.max(2, item.seconds / 300))}px"
                   class="tone-{books.find((book) => book.id === item.book_id)?.color ?? 'olive'}"
                 ></i>{/each}</span
             >{#if record?.seconds}<span
                 >{minutes(record.seconds)}<span class="minute-label"> min</span></span
               >{/if}</span
           >
-        </button>
+        </div>
       {/each}
       <div class="calendar-runs">
         {#each runs as run}
@@ -68,5 +73,7 @@
   {/each}
 </div>
 <div class="calendar-legend">
-  <span><i></i> Reading time</span><span>Tap a day for its reading journal</span>
+  <span><i></i> Reading time</span><span
+    >Select a date for its journal · Ribbons open book details</span
+  >
 </div>

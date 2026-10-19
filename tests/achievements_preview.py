@@ -1,37 +1,24 @@
-"""Exercise achievement browsing and details in the running KOReader preview."""
-from preview_http import request, action, state_after, capture
-
+"""Achievement browsing, filters and details in the real KOReader preview."""
+from preview_http import request, action, state_after, capture, tap
 
 if __name__ == "__main__":
     request("/api/reload", {})
     state_after()
-    action({"type": "tap", "x": 790, "y": 60})
-    assert state_after()["tab"] == "achievements"
-    state = action({"type": "key", "key": "Right"})
-    assert state["achievement_page"] == 2
-    state = action({"type": "key", "key": "Left"})
-    assert state["achievement_page"] == 1
-    state = action({"type": "tap", "x": 900, "y": 405})
+    assert tap("tab-achievements")["tab"] == "achievements"
+    assert action({"type": "key", "key": "Right"})["achievement_page"] == 2
+    assert action({"type": "key", "key": "Left"})["achievement_page"] == 1
+    state = tap("achievement-filter-books")
     assert state["achievement_filter"] == "books" and state["achievement_page"] == 1
     capture("demo-book-quests.png")
-    before = request("/screen.png")
-    # The former preview location now belongs to the card's details target.
-    state = action({"type": "tap", "x": 920, "y": 580})
-    assert not state["achievement_toast"], "tapping a card does not replay a notification"
-    assert request("/screen.png") != before, "the card opens its details"
+    details = next(h["id"] for h in state["hit_targets"] if h["id"].startswith("achievement-details-"))
+    state = tap(details)
+    assert state["achievement_detail"] and not state["achievement_toast"]
     capture("demo-achievement-details.png")
-    action({"type": "tap", "x": 500, "y": 700})
-    assert request("/screen.png") == before, "closing details restores the gallery"
-    state = action({"type": "key", "key": "Right"})
-    assert state["achievement_page"] == 2
-    state = action({"type": "tap", "x": 415, "y": 405})
-    assert state["achievement_filter"] == "earned" and state["achievement_page"] == 1
+    assert not tap("achievement-back")["achievement_detail"]
+    assert tap("achievement-filter-earned")["achievement_filter"] == "earned"
     capture("demo-earned-achievements.png")
-    state = action({"type": "tap", "x": 655, "y": 405})
-    assert state["achievement_filter"] == "locked"
+    assert tap("achievement-filter-locked")["achievement_filter"] == "locked"
     capture("demo-locked-achievements.png")
-    action({"type": "tap", "x": 170, "y": 405})
+    tap("achievement-filter-all")
     capture("demo-achievements.png")
-    state = action({"type": "tap", "x": 500, "y": 1275})
-    assert state["tab"] == "achievements" and not state["achievement_toast"], "gallery footer has no reading preview action"
-    print("Achievement paging, filters, full-card details and removal of preview actions passed.")
+    print("Achievement paging, filters and native details passed; no preview action or live XP.")

@@ -6,6 +6,7 @@ local TextWidget = require("ui/widget/textwidget")
 local UIManager = require("ui/uimanager")
 local Widget = require("ui/widget/widget")
 local Screen = Device.screen
+local Theme = require("kindlevel_theme")
 
 local Toast = Widget:extend{
     name = "KindlevelAchievementToast", toast = true, modal = false,
@@ -17,37 +18,35 @@ function Toast:init()
     self.scale = scale
     local function px(value) return math.floor(value * scale + 0.5) end
     self.width = math.min(px(324), Screen:getWidth() - px(32))
-    self.height = px(111)
-    self.dimen = Geom:new{ x = Screen:getWidth() - self.width - px(19), y = px(18),
+    self.height = px(94)
+    self.dimen = Geom:new{ x = Screen:getWidth() - self.width - px(19), y = Screen:getHeight() - self.height - px(62),
         w = self.width + px(3), h = self.height + px(3) }
     self.resources, self.texts = {}, {}
     local factor = Screen:scaleBySize(1000) / 1000
     local function text(value, x, y, width, size, gray, bold, serif)
         local widget = TextWidget:new{ text = value, padding = 0, bold = bold, max_width = width,
-            face = Font:getFace(serif and "NotoSerif-Regular.ttf" or "cfont", size * scale / factor),
+            face = Theme.face(self.plugin_dir, size * scale / factor, {serif=serif}),
             fgcolor = Blitbuffer.Color8(gray) }
         self.resources[#self.resources + 1] = widget
         self.texts[#self.texts + 1] = { widget = widget, x = x, y = y }
     end
-    self.icon = require("kindlevel_achievements").iconWidget(self.achievement, self.plugin_dir, px(48))
+    self.icon = require("kindlevel_achievements").iconWidget(self.achievement, self.plugin_dir, px(36))
     self.resources[#self.resources + 1] = self.icon
     local tx = px(82)
     local tw = self.width - tx - px(15)
-    text("ACHIEVEMENT UNLOCKED", tx, px(12), tw, 9, 95, false)
-    text(self.achievement.title, tx, px(31), tw, 20, 0, false, true)
-    text(self.achievement.notification, tx, px(60), tw, 11, 85, false)
-    text(tostring(self.achievement.xp) .. " XP · reserved", tx, px(86), tw, 10, 85, false)
-    if self.preview then text("PREVIEW", self.width - px(63), px(89), px(55), 8, 145, false) end
+    text("ACHIEVEMENT UNLOCKED", tx, px(15), tw, 12, 85, false)
+    text(self.achievement.title, tx, px(38), tw, 21, 34, false, true)
+    text(self.achievement.notification, tx, px(68), tw, 12, 85, false)
+    if self.preview then text("PREVIEW", self.width-px(72),px(4),px(65),9,100,false) end
 end
 
 function Toast:paintTo(bb, x, y)
     self.dimen.x, self.dimen.y = x, y
     local function px(v) return math.floor(v * self.scale + 0.5) end
-    bb:paintRoundedRect(x + px(3), y + px(3), self.width, self.height, Blitbuffer.Color8(205), px(5))
-    bb:paintRoundedRect(x, y, self.width, self.height, Blitbuffer.COLOR_WHITE, px(5))
-    bb:paintBorder(x, y, self.width, self.height, math.max(1, px(1)), Blitbuffer.Color8(75), px(5))
-    bb:paintRect(x + px(11), y + px(24), px(57), px(57), Blitbuffer.Color8(242))
-    self.icon:paintTo(bb, x + px(15), y + px(28))
+    bb:paintRect(x, y, self.width, self.height, Blitbuffer.COLOR_WHITE)
+    bb:paintBorder(x, y, self.width, self.height, math.max(1,px(1)), Blitbuffer.Color8(100))
+    bb:paintRect(x+px(14),y+px(20),px(54),px(54),Blitbuffer.Color8(238))
+    self.icon:paintTo(bb,x+px(23),y+px(29))
     for _, item in ipairs(self.texts) do item.widget:paintTo(bb, x + item.x, y + item.y) end
 end
 

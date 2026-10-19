@@ -7,3 +7,7 @@ KOReader continues to record reading activity. Kindlevel reads its statistics.sq
 Achievement categories were informed by Reading Insights (https://github.com/peterboda236/readinginsights.koplugin) and ReadMastery (https://github.com/Lalocaballero/readmastery.koplugin). The achievement engine, definitions, interface and monochrome SVG badges in Kindlevel are original implementations; no code or artwork from those projects is included.
 
 assets/cacert.pem is Mozilla's CA certificate data converted to PEM by curl's CA Extract service (https://curl.se/docs/caextract.html), dated September 25, 2026. It is distributed under MPL-2.0; see licenses/MPL-2.0.txt. The updater uses it to verify HTTPS certificate chains, including on devices with older system certificate stores. This file's upstream source is https://curl.se/ca/cacert.pem.
+
+Pocket Ledger's UI uses the free Pixelarticons SVG set by Gerrit Halfmann (https://github.com/halfmage/pixelarticons), under the MIT license; see licenses/Pixelarticons-MIT.txt. Original achievement artwork remains in assets/achievements; shared categories use the pixel icon set.
+
+IBM Plex Sans and IBM Plex Mono are bundled locally for the interface under the SIL Open Font License 1.1. Sources: https://github.com/IBM/plex and https://github.com/google/fonts. See licenses/IBM-Plex-Sans-OFL.txt and licenses/IBM-Plex-Mono-OFL.txt. The dashboard serves WOFF2 copies of the same fonts without contacting a font CDN.

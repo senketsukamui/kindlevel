@@ -39,6 +39,10 @@ local network=require("ui/network/manager")
 network.runWhenOnline=function(_,callback) callback() end
 network.afterWifiAction=function() end
 owner:onKindlevel("settings")
+local group_hit
+for _, item in ipairs(owner.home.hits) do if item.id=="settings-connection" then group_hit=item;break end end
+assert(group_hit,"settings group exists")
+owner.home:onTapKindlevel(nil,{pos={x=group_hit.x+group_hit.w/2,y=group_hit.y+group_hit.h/2}})
 local hit
 for _,item in ipairs(owner.home.hits) do if item.id=="web-dashboard" then hit=item end end
 assert(hit and hit.y+hit.h<owner.home:px(670),"dashboard settings button fits above footer")

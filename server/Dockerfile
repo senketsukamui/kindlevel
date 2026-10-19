@@ -4,6 +4,8 @@ COPY server/web/package*.json ./
 RUN npm ci
 COPY server/web ./
 COPY kindlevel.koplugin/assets/achievements /workspace/kindlevel.koplugin/assets/achievements
+COPY kindlevel.koplugin/assets/ui /workspace/kindlevel.koplugin/assets/ui
+COPY kindlevel.koplugin/licenses /workspace/kindlevel.koplugin/licenses
 RUN npm run check && npm run build
 
 FROM golang:1.26-alpine AS backend

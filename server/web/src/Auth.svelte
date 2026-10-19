@@ -30,49 +30,66 @@
 </script>
 
 <main class="auth-page">
-  <section class="auth-card panel">
-    <span class="brand-mark"><Icon name="book" size={25} /></span>
-    <span class="eyebrow">YOUR READING HOME</span>
-    <h1>{initialized ? 'Welcome back.' : 'Make yourself at home.'}</h1>
-    <p>
-      {initialized
-        ? 'Sign in to your own little reading space.'
-        : 'Create the owner account for your Kindlevel server.'}
-    </p>
-    <form onsubmit={submit}>
-      {#if !initialized}<label class="auth-field"
-          >Setup code<input type="password" autocomplete="off" required bind:value={code} /><small
-            >Find it on your server: <code>docker compose exec kindlevel cat /data/setup-code</code
-            ></small
-          ></label
-        >{/if}
-      <label class="auth-field"
-        >Username<input
-          autocomplete="username"
-          maxlength="64"
-          required
-          bind:value={username}
-        /></label
-      >
-      <label class="auth-field"
-        >Password<input
-          type="password"
-          autocomplete={initialized ? 'current-password' : 'new-password'}
-          minlength={initialized ? 1 : 12}
-          maxlength="256"
-          required
-          bind:value={password}
-        />{#if !initialized}<small>At least 12 characters.</small>{/if}</label
-      >
-      {#if error}<p class="form-error" role="alert">{error}</p>{/if}
-      <button class="primary-button" disabled={busy}
-        >{busy
-          ? 'Opening your reading home…'
-          : initialized
-            ? 'Sign in'
-            : 'Create my reading home'}<Icon name="arrow" size={17} /></button
-      >
-    </form>
-    <p class="auth-footnote">Self-hosted. Yours to keep.</p>
-  </section>
+  <header class="auth-header">
+    <a class="brand" href="#home"><Icon name="book" size={28} /><span>kindlevel</span></a>
+  </header>
+  <div class="auth-layout">
+    <section class="auth-welcome">
+      <h1>{initialized ? 'Welcome back.' : 'A reading space of your own.'}</h1>
+      <p>
+        {initialized
+          ? 'Your reading corner is waiting.'
+          : 'Books, little milestones, and a quiet place to see your reading life.'}
+      </p>
+      <span class="mono">A few pages. A little world of your own.</span>
+    </section>
+    <section class="auth-card">
+      <h2>{initialized ? 'Sign in to Kindlevel' : 'Create your reading space'}</h2>
+      <p>
+        {initialized
+          ? 'Your self-hosted reading space.'
+          : 'Create the owner account for this Kindlevel server.'}
+      </p>
+      <form onsubmit={submit}>
+        {#if !initialized}<label class="auth-field"
+            >Server setup code<input
+              type="password"
+              autocomplete="off"
+              required
+              bind:value={code}
+            /><small
+              >Find it on your server:<code>docker compose exec kindlevel cat /data/setup-code</code
+              ></small
+            ></label
+          >{/if}
+        <label class="auth-field"
+          >Username<input
+            autocomplete="username"
+            maxlength="64"
+            required
+            bind:value={username}
+          /></label
+        >
+        <label class="auth-field"
+          >Password<input
+            type="password"
+            autocomplete={initialized ? 'current-password' : 'new-password'}
+            minlength={initialized ? 1 : 12}
+            maxlength="256"
+            required
+            bind:value={password}
+          />{#if !initialized}<small>At least 12 characters.</small>{/if}</label
+        >
+        {#if error}<p class="form-error" role="alert">{error}</p>{/if}
+        <button class="primary-button" disabled={busy}
+          >{busy
+            ? 'Opening your reading space…'
+            : initialized
+              ? 'Sign in'
+              : 'Create reading space'}</button
+        >
+      </form>
+      <p class="auth-footnote">Self-hosted. Yours to keep.</p>
+    </section>
+  </div>
 </main>

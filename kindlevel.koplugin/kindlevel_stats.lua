@@ -37,7 +37,7 @@ function Stats.duration(seconds)
     if seconds > 0 and seconds < 60 then return "<1 min" end
     local minutes = math.floor(seconds / 60)
     if minutes < 60 then return tostring(minutes) .. " min" end
-    return string.format("%d h %02d", math.floor(minutes / 60), minutes % 60)
+    return string.format("%dh %02dm", math.floor(minutes / 60), minutes % 60)
 end
 
 function Stats.number(value)

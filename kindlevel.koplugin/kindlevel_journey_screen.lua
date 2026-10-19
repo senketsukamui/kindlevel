@@ -13,15 +13,14 @@ end
 
 function View:journeyControls(y)
     local p, width, threshold = self:px(28), self.width - self:px(56), self:journeyThreshold()
-    self:text("Break length", p, self:px(y + 8), width / 2, self:px(23), 12, { single = true, gray = 90 })
-    for i, days in ipairs{ 3, 7, 14 } do
-        local x = p + width / 2 + (i - 1) * width / 6
-        self:text(days .. " days", x, self:px(y + 8), width / 6, self:px(23), 12, { center = true, single = true })
-        if threshold == days then self:rect(x + self:px(8), self:px(y + 34), width / 6 - self:px(16), self:px(2), 0) end
-        self:hit(x, self:px(y), width / 6, self:px(43), function()
-            self.owner.settings:saveSetting("return_break_days", days); self.owner.settings:flush()
-            self.stats_list_page = 1; self:rebuild()
-        end, "break-" .. days)
+    self:text("Break length", p, self:px(y+13), width/2, self:px(28), 16, {single=true,gray=85})
+    for i,days in ipairs{3,7,14} do
+        local x=p+width/2+(i-1)*width/6;local active=threshold==days
+        if active then self:rect(x,self:px(y),width/6-self:px(6),self:px(48),34) end
+        self:text(days.." days",x,self:px(y+14),width/6-self:px(6),self:px(27),15,{center=true,single=true,gray=active and 255 or 85})
+        self:hit(x,self:px(y),width/6-self:px(6),self:px(48),function()
+            self.owner.settings:saveSetting("return_break_days",days);self.owner.settings:flush();self.stats_list_page=1;self:rebuild()
+        end,"break-"..days)
     end
 end
 
@@ -126,9 +125,9 @@ function View:statsRecovery()
     local mode = self.stats_recovery_mode or "reading"
     for i, item in ipairs{ { "reading", "Returning to reading" }, { "books", "Returning to books" } } do
         local x = p + (i - 1) * width / 2
-        self:text(item[2], x, self:px(252), width / 2, self:px(23), 13, { center = true, single = true })
-        if mode == item[1] then self:rect(x + self:px(16), self:px(280), width / 2 - self:px(32), self:px(2), 0) end
-        self:hit(x, self:px(244), width / 2, self:px(42), function()
+        if mode==item[1] then self:rect(x,self:px(244),width/2-self:px(8),self:px(48),34) end
+        self:text(item[2],x,self:px(257),width/2-self:px(8),self:px(28),16,{center=true,single=true,gray=mode==item[1] and 255 or 85})
+        self:hit(x, self:px(244), width / 2, self:px(48), function()
             self.stats_recovery_mode, self.stats_list_page = item[1], 1; self:rebuild()
         end, "recovery-" .. item[1])
     end

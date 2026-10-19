@@ -68,6 +68,10 @@ function Achievements.find(id) return Achievements.by_id[id] end
 
 function Achievements.iconPath(item, plugin_dir)
     local icon = item.icon or "achievement.svg"
+    local shared={ ["achievements/book.svg"]="book-open", ["achievements/pages.svg"]="book-open",
+        ["achievements/calendar.svg"]="calendar", ["achievements/clock.svg"]="clock",
+        ["achievements/moon.svg"]="moon", ["achievements/sun.svg"]="sun", ["achievements/stack.svg"]="book-open" }
+    if shared[icon] then icon="ui/"..shared[icon]..".svg" end
     if icon:match("^[%w_/-]+%.svg$") and not icon:find("..", 1, true) and icon:sub(1,1) ~= "/" then
         local path = plugin_dir .. "/assets/" .. icon
         if lfs.attributes(path, "mode") == "file" then return path end

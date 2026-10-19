@@ -40,47 +40,58 @@ def capture(name):
     (OUTPUT/name).write_bytes(png)
 
 
+def tap(target):
+    """Use a rendered tap target so tests survive layout and density changes."""
+    state = state_after()
+    hit = next((item for item in state.get("hit_targets", []) if item["id"] == target), None)
+    assert hit is not None, f"Missing rendered target: {target}"
+    return action({"type": "tap", "x": hit["x"] + hit["w"] / 2,
+                   "y": hit["y"] + hit["h"] / 2})
+
+
 if __name__ == "__main__":
     request("/api/reload", {})
     state_after()
+    assert state_after()["tab"] == "read"
+    capture("demo-reading-home.png")
+    tap("tab-stats")
     capture("demo-statistics.png")
-    action({"type": "tap", "x": 730, "y": 270})
+    tap("period-year")
     capture("demo-year.png")
-    today = dt.date.today()
-    index = (today-dt.date(today.year, 1, 1)).days + dt.date(today.year, 1, 1).weekday()
-    week, weekday = index//7, index % 7
-    panel, column = week//27, week % 27
-    scale = min(1072/600, 1448/800)
-    px = lambda value: int(value*scale+0.5)
-    step = (1072-2*px(28))//27
-    x = px(28)+column*step+px(7)
-    y = px(452+panel*137)+weekday*px(16)+px(7)
-    action({"type": "tap", "x": x, "y": y})
+    today = dt.date.today().isoformat()
+    assert tap("calendar-" + today)["stats_view"] == "day"
     capture("demo-day.png")
-    action({"type": "tap", "x": 250, "y": px(510)})
-    capture("demo-book.png")
     action({"type": "key", "key": "Esc"})
-    action({"type": "key", "key": "Esc"})
-    action({"type": "swipe", "x": 500, "y": 700, "direction": "east"})
-    # Calendar uses the same native Lua screen, with ribbons and month navigation.
-    request("/api/reload", {})
-    state_after()
-    action({"type": "tap", "x": 500, "y": px(715)})
-    action({"type": "tap", "x": px(88), "y": px(696)})
+    tap("book-calendar")
     capture("demo-book-calendar.png")
-    action({"type": "tap", "x": 850, "y": px(85)})
+    target = next((h["id"] for h in state_after()["hit_targets"] if h["id"].startswith("month-book-")), None)
+    if target:
+        assert tap(target)["stats_view"] == "book"
+        capture("demo-book.png")
+        action({"type": "key", "key": "Esc"})
+    tap("tab-read")
+    assert tap("year-goal")["stats_view"] == "goal"
     capture("demo-year-goal.png")
-    # Exercise the actual numeric InputDialog and persistence, then restore the demo target.
+    # Exercise KOReader's unchanged numeric dialog and restore the demo target.
     for target in (12, 24):
-        action({"type": "tap", "x": 500, "y": px(415)})
+        tap("set-year-goal")
         for _ in range(2):
             action({"type": "key", "key": "Backspace"})
         action({"type": "text", "text": str(target)})
         action({"type": "tap", "x": 750, "y": 855})
         preferences = (OUTPUT.parents[1]/".cache/preview/data/settings/kindlevel.lua").read_text()
         import re
-        assert re.search(r'\["'+str(today.year)+r'"\]\s*=\s*'+str(target), preferences), "native goal editor persisted target"
-    # End on the initial dashboard, ready for the user to explore.
-    request("/api/reload", {})
-    state_after()
-    print("Preview reload, native touch, calendars, yearly goal editor, keyboard, and swipe passed.")
+        assert re.search(r'\["'+str(dt.date.today().year)+r'"\]\s*=\s*'+str(target), preferences), "native goal editor persisted target"
+    tap("tab-settings")
+    assert tap("settings-reading")["settings_group"] == "reading"
+    assert action({"type": "key", "key": "Esc"}).get("settings_group") is None
+    assert tap("settings-library")["settings_group"] == "library"
+    tap("settings-back")
+    assert tap("settings-connection")["settings_group"] == "connection"
+    capture("demo-connection.png")
+    tap("tab-library")
+    capture("demo-library.png")
+    assert tap("book-1")["tab"] == "read"
+    action({"type": "swipe", "x": 500, "y": 700, "direction": "west"})
+    capture("demo-reading-next.png")
+    print("Real preview reload, tap targets, journals, calendar ribbons, goals, grouped settings and swipes passed.")

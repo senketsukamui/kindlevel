@@ -32,7 +32,7 @@ local background = Background:new{}
 UIManager:show(background)
 Toasts:preview(first, plugin)
 local toast = Toasts.active
-assert(toast.dimen.x > Device.screen:getWidth()/3 and toast.dimen.y < Device.screen:getHeight()/5, "toast is in the upper-right corner")
+assert(toast.dimen.x > Device.screen:getWidth()/3 and toast.dimen.y > Device.screen:getHeight()/2, "toast is in the lower-right corner")
 assert(toast.dimen.x + toast.dimen.w <= Device.screen:getWidth() and toast.dimen.y + toast.dimen.h <= Device.screen:getHeight(),
     "toast and shadow remain inside screen")
 UIManager:forceRePaint()
