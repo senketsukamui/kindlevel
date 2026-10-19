@@ -197,8 +197,9 @@ home:onBack()
 assert(home.stats_view == "month", "back restores the book calendar")
 home.stats_month = Stats.date("2026-08-01")
 render("book-calendar-six-weeks")
+tap("tab-read")
 tap("year-goal")
-assert(home.stats_view == "goal", "year goal header opens confirmed completions")
+assert(home.stats_view == "goal", "reading-home year goal opens confirmed completions")
 render("year-goal")
 local recorded_without_history
 owner.recordFinish = function(_, selected) recorded_without_history = selected end

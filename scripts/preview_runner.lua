@@ -52,7 +52,7 @@ if config.demo and not settings:has("finished_books") then
     settings:flush()
 end
 require("apps/filemanager/filemanager"):showFiles("/preview/books")
-require("apps/filemanager/filemanager").instance.kindlevel:onKindlevel("stats")
+require("apps/filemanager/filemanager").instance.kindlevel:onKindlevel("read")
 
 local sequence = 0
 local frame = 0
@@ -65,12 +65,19 @@ local function capture()
     local f = assert(io.open(ipc .. "/state.next.json", "w"))
     local manager = require("apps/filemanager/filemanager").instance
     local home = manager and manager.kindlevel and manager.kindlevel.home
+    local targets = {}
+    for _, hit in ipairs(home and home.hits or {}) do
+        if hit.id then targets[#targets + 1] = { id = hit.id, x = hit.x, y = hit.y, w = hit.w, h = hit.h } end
+    end
     f:write(json.encode{ sequence = sequence, frame = frame, width = Device.screen:getWidth(), height = Device.screen:getHeight(),
         demo = config.demo, rendered = os.time(), achievement_toast = Toasts.active and Toasts.active.achievement.id or false,
         tab = home and home.tab, stats_view = home and home.stats_view, stats_book_id = home and home.stats_book_id,
         stats_list_page = home and home.stats_list_page, recovery_mode = home and (home.stats_recovery_mode or "reading"),
         break_days = home and home:journeyThreshold(), achievement_page = home and (home.achievement_page or 1),
         achievement_filter = home and (home.achievement_filter or "all"),
+        achievement_detail = home and home.achievement_detail and home.achievement_detail.item.id or false,
+        settings_group = home and home.settings_group,
+        hit_targets = targets,
         achievement_preview = Toasts.active and Toasts.active.preview or false })
     f:close()
     assert(os.rename(ipc .. "/state.next.json", ipc .. "/state.json"))

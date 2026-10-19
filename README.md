@@ -8,7 +8,7 @@ The plugin works offline. KOReader handles document rendering, saved positions a
 
 ## Features
 
-- Cover carousel, local library and one-tap resume.
+- A cozy pixel reading home, searchable local library and one-tap resume.
 - Reading time, pages, streaks, daily journals and book details.
 - Yearly heatmaps, monthly book timelines and reading goals.
 - Book journeys, breaks and returns.

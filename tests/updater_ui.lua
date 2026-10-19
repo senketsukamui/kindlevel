@@ -42,6 +42,10 @@ local Reader=require("apps/reader/readerui")
 Manager:showFiles(target .. "/books")
 local owner=Manager.instance.kindlevel
 owner:onKindlevel("settings")
+local group_hit
+for _, item in ipairs(owner.home.hits) do if item.id=="settings-updates" then group_hit=item;break end end
+assert(group_hit,"settings group exists")
+owner.home:onTapKindlevel(nil,{pos={x=group_hit.x+group_hit.w/2,y=group_hit.y+group_hit.h/2}})
 local update_hit
 for _,hit in ipairs(owner.home.hits) do if hit.id=="check-updates" then update_hit=hit end end
 assert(update_hit and update_hit.y+update_hit.h<owner.home:px(670),"update setting fits above the footer")

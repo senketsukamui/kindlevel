@@ -169,7 +169,7 @@ local function tap(id)
     end end
     error("Missing hit " .. id)
 end
-for page=1,math.ceil(#A.catalog/4) do home.achievement_page=page; render("achievement-catalog-" .. page) end
+for page=1,math.ceil(#A.catalog/3) do home.achievement_page=page; render("achievement-catalog-" .. page) end
 home.achievement_page=1;home:rebuild();tap("achievements-next");assert(home.achievement_page==2,"pager")
 tap("achievement-filter-books");assert(#home:achievementItems()==8 and home.achievement_page==1,"book quests filter resets page")
 render("achievement-book-quests")
