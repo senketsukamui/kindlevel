@@ -23,19 +23,19 @@ test('desktop dashboard, persistent goals and actual navigation', async ({ page 
   page.on('pageerror', (error) => errors.push(error.message));
   await page.setViewportSize({ width: 1440, height: 1100 });
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'A little time, a few pages.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Your reading, at a glance.' })).toBeVisible();
   await expect(page.getByText('Demo reading history')).toBeVisible();
-  await expect(page.locator('.book-calendar')).toBeVisible();
+  await expect(page.locator('.current-book')).toBeVisible();
   await page.screenshot({ path: '../../dist/previews/dashboard-home.png', fullPage: true });
   await page.getByRole('button', { name: 'Reading goals', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
   await dialog.getByLabel('Daily reading time').fill('45');
   await dialog.getByLabel('Books this year').fill('20');
-  await dialog.getByRole('button', { name: 'Save my goals' }).click();
+  await dialog.getByRole('button', { name: 'Save goals' }).click();
   await expect(dialog).not.toBeVisible();
   await page.reload();
-  await expect(page.locator('.today-value')).toContainText('/ 45 min');
+  await expect(page.locator('.today-value')).toContainText('/ 45');
   await page.getByRole('button', { name: 'Your library', exact: true }).click();
   await page.getByRole('textbox', { name: 'Search your library' }).fill('home');
   await expect(page.locator('.library-book')).toHaveCount(1);
@@ -44,14 +44,19 @@ test('desktop dashboard, persistent goals and actual navigation', async ({ page 
   await page.keyboard.press('Escape');
   await expect(dialog).not.toBeVisible();
   await page.getByRole('button', { name: 'Reading activity', exact: true }).click();
+  await page.getByRole('button', { name: 'Year', exact: true }).click();
   await expect(page.locator('.heatmap')).toBeVisible();
+  await page.getByRole('button', { name: 'Month', exact: true }).click();
   await page.getByRole('button', { name: 'Previous month', exact: true }).click();
   await page.getByRole('button', { name: 'Today', exact: true }).click();
-  await page.locator('.calendar-day:not(.outside)').first().click();
+  await page
+    .locator('.calendar-day:not(.outside) .calendar-day-button:not(:disabled)')
+    .first()
+    .click();
   await expect(dialog).toBeVisible();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: /^Achievements/ }).click();
-  await page.getByRole('button', { name: 'Still to discover', exact: true }).click();
+  await page.getByRole('button', { name: 'Locked', exact: true }).click();
   await expect(page.locator('.achievement-card')).toHaveCount(6);
   await page.locator('.achievement-card').first().click();
   await expect(dialog).toBeVisible();
@@ -60,14 +65,14 @@ test('desktop dashboard, persistent goals and actual navigation', async ({ page 
   await page.getByRole('button', { name: 'Reading goals', exact: true }).click();
   await dialog.getByLabel('Daily reading time').fill('30');
   await dialog.getByLabel('Books this year').fill('12');
-  await dialog.getByRole('button', { name: 'Save my goals' }).click();
+  await dialog.getByRole('button', { name: 'Save goals' }).click();
   expect(errors).toEqual([]);
 });
 
 test('mobile layout stays inside the screen and goals remain usable', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  await expect(page.locator('.book-calendar')).toBeVisible();
+  await expect(page.locator('.current-book')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.screenshot({ path: '../../dist/previews/dashboard-mobile.png', fullPage: true });
   await page.getByRole('button', { name: 'Reading goals', exact: true }).click();
@@ -175,12 +180,12 @@ test('login, pairing, real history, revocation and an empty Kindle', async ({ pa
     .locator('.device-card')
     .filter({ has: page.getByRole('heading', { name: 'Empty Kindle' }) });
   await card.getByRole('button', { name: 'View reading history' }).click();
-  await expect(page.getByRole('heading', { name: 'Your next chapter is waiting.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Your next chapter starts here.' })).toBeVisible();
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Welcome back.' })).toBeVisible();
   await page.getByLabel('Username', { exact: true }).fill('reader');
   await page.getByLabel('Password', { exact: true }).fill('test-password-only');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'A little time, a few pages.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Your reading, at a glance.' })).toBeVisible();
   expect(errors).toEqual([]);
 });

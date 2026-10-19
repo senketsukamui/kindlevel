@@ -1,11 +1,28 @@
 <script>
   import Icon from './Icon.svelte';
+  import { onMount } from 'svelte';
   let { devices = [], serverURL = '', sourceDevice = '', onrefresh, onselect } = $props();
   let code = $state('');
   let expires = $state(0);
   let error = $state('');
   let busy = $state(false);
   let confirmRevoke = $state('');
+  let now = $state(Math.floor(Date.now() / 1000));
+  let copyMessage = $state('');
+  let serverAddress = $derived(serverURL || window.location.origin);
+  let expired = $derived(expires > 0 && now >= expires);
+  onMount(() => {
+    const timer = setInterval(() => (now = Math.floor(Date.now() / 1000)), 1000);
+    return () => clearInterval(timer);
+  });
+  async function copyAddress() {
+    try {
+      await navigator.clipboard.writeText(serverAddress);
+      copyMessage = 'Server address copied.';
+    } catch {
+      copyMessage = 'Select and copy the address above.';
+    }
+  }
   function lastSeen(seconds) {
     return seconds ? new Date(seconds * 1000).toLocaleString() : 'Waiting for the first sync';
   }
@@ -43,36 +60,39 @@
   }
 </script>
 
-<section class="panel pairing-panel">
-  <span class="pairing-icon"><Icon name="device" size={32} /></span>
-  <div>
-    <span class="eyebrow">A LITTLE BRIDGE TO YOUR KINDLE</span>
-    <h2>Bring your reading home.</h2>
-    <p>Pair once, then sync your library, reading statistics and achievements over Wi-Fi.</p>
-    <ol>
-      <li>On Kindle, open <strong>Kindlevel → Settings → Web dashboard</strong>.</li>
-      <li>
-        Enter your server address{#if serverURL}: <strong>{serverURL}</strong>{/if}.
-      </li>
-      <li>Enter the pairing code below, then choose <strong>Sync now</strong>.</li>
-    </ol>
+<section class="pairing-panel">
+  <div class="pair-instructions">
+    <h2>1. Open Kindlevel on your Kindle</h2>
+    <p>Settings → Web dashboard → Connect to server</p>
+    <label class="server-address"
+      ><span>2. Server address</span><input
+        readonly
+        value={serverAddress}
+        aria-label="Server address"
+      /></label
+    >
+    <button class="outline-button" onclick={copyAddress}>Copy server address</button>
+    {#if copyMessage}<span class="copied-message" role="status">{copyMessage}</span>{/if}
+    <div class="pair-code-box">
+      <h2>3. Enter your pairing code</h2>
+      {#if code}<strong class="pair-code">{code}</strong><span class="detail-footnote" role="status"
+          >{expired
+            ? 'Code expired. Generate a fresh code.'
+            : `Expires at ${new Date(expires * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}</span
+        >{/if}
+      <button class="primary-button" disabled={busy} onclick={pairing}
+        >{busy ? 'Generating code…' : code ? 'Generate a new code' : 'Pair a Kindle'}</button
+      >
+    </div>
     <p class="detail-footnote">
-      Your Kindle needs a server address it can reach. “localhost” on Kindle points to the Kindle
-      itself. Use the server address shown above; for HTTP, confirm Allow HTTP on the device.
+      Use an address your Kindle can reach. “localhost” points to the Kindle itself. For HTTP,
+      confirm Allow HTTP on the device. Reading statistics arrive after the first sync.
     </p>
   </div>
-  <div class="pair-code-box">
-    {#if code}<span class="eyebrow">ONE-TIME PAIRING CODE</span><strong class="pair-code"
-        >{code}</strong
-      ><span class="detail-footnote"
-        >Expires at {new Date(expires * 1000).toLocaleTimeString([], {
-          hour: '2-digit',
-          minute: '2-digit',
-        })}</span
-      >{/if}<button class="primary-button" disabled={busy} onclick={pairing}
-      >{code ? 'Generate a new code' : 'Pair a Kindle'}<Icon name="arrow" size={17} /></button
-    >
-  </div>
+  <aside class="pairing-aside">
+    <h2>Your books stay with you.</h2>
+    <p>Pair once, then bring your reading statistics and achievements here over Wi-Fi.</p>
+  </aside>
 </section>
 {#if error}<p class="form-error" role="alert">{error}</p>{/if}
 <div class="device-list">
