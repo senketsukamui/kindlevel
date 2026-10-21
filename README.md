@@ -1,5 +1,8 @@
 # Kindlevel
 
+> [!WARNING]
+> This software is unfinished. Keep your expectations low.
+
 A reading home for KOReader: browse your library, follow your reading habits, and collect achievements. Add an optional self-hosted dashboard to see your reading history in a browser.
 
 The plugin works offline. KOReader handles document rendering, saved positions and reading activity.
